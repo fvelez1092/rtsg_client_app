@@ -1,5 +1,5 @@
-import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:app_rtsg_client/core/theme/app_colors.dart';
 
 class HomeTripPanel extends StatelessWidget {
   const HomeTripPanel({super.key});
@@ -9,12 +9,19 @@ class HomeTripPanel extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(18),
           topRight: Radius.circular(18),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 14,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -25,14 +32,26 @@ class HomeTripPanel extends StatelessWidget {
               height: 5,
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: Colors.black12,
+                color: AppColors.borderSoft,
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
           ),
           const Text(
             'Nueva carrera',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          _InputTile(
+            icon: Icons.my_location,
+            title: 'Origen',
+            hint: 'Selecciona tu punto de partida',
+            onTap: () {},
           ),
           const SizedBox(height: 10),
           _InputTile(
@@ -40,6 +59,29 @@ class HomeTripPanel extends StatelessWidget {
             title: 'Destino',
             hint: '¿A dónde vas?',
             onTap: () {},
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: _SmallCard(
+                  icon: Icons.attach_money,
+                  title: 'Oferta',
+                  value: '\$ 0.00',
+                  onTap: () {},
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SmallCard(
+                  icon: Icons.payment,
+                  title: 'Pago',
+                  value: 'Efectivo',
+                  onTap: () {},
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Column(
@@ -52,24 +94,23 @@ class HomeTripPanel extends StatelessWidget {
               const SizedBox(height: 6),
               _FrequentItem(
                 icon: Icons.location_on,
-                color: AppColors.taxiYellow,
+                color: AppColors.brandGreen,
                 title: "Casa",
                 subtitle: "Av 5 de junio y Paso Lateral",
                 onTap: () => null,
               ),
             ],
           ),
+          const Spacer(),
 
-          // const Spacer(),
-
-          // SizedBox(
-          //   width: double.infinity,
-          //   height: 48,
-          //   child: ElevatedButton(
-          //     onPressed: () {},
-          //     child: const Text('Continuar'),
-          //   ),
-          // ),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () {},
+              child: const Text('Continuar'),
+            ),
+          ),
         ],
       ),
     );
@@ -92,16 +133,16 @@ class _InputTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.grey.shade200,
+      color: AppColors.inputFill,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: AppColors.brandGreen),
+              Icon(icon, size: 20, color: AppColors.textSecondary),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -109,18 +150,21 @@ class _InputTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       hint,
-                      style: const TextStyle(color: Colors.black54),
+                      style: const TextStyle(color: AppColors.textSecondary),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.brandGreen),
+              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
             ],
           ),
         ),
@@ -145,7 +189,7 @@ class _SmallCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.grey.shade100,
+      color: AppColors.inputFill,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -154,7 +198,7 @@ class _SmallCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Icon(icon, size: 20),
+              Icon(icon, size: 20, color: AppColors.textSecondary),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -162,10 +206,16 @@ class _SmallCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
-                    Text(value, style: const TextStyle(color: Colors.black54)),
+                    Text(
+                      value,
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
                   ],
                 ),
               ),
@@ -202,16 +252,10 @@ class _FrequentItem extends StatelessWidget {
       title,
       style: const TextStyle(
         fontWeight: FontWeight.w600,
-        color: Colors.black45,
+        color: Colors.black87,
       ),
     ),
-    subtitle: Text(
-      subtitle,
-      style: const TextStyle(
-        fontWeight: FontWeight.w600,
-        color: Colors.black45,
-      ),
-    ),
+    subtitle: Text(subtitle),
     onTap: onTap,
   );
 }

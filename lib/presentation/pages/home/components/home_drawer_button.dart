@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_rtsg_client/core/theme/app_colors.dart';
 
 class HomeDrawerButton extends StatelessWidget {
   const HomeDrawerButton({super.key});
@@ -7,15 +8,16 @@ class HomeDrawerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Builder(
       builder: (context) => Material(
-        //color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         elevation: 2,
+        shadowColor: AppColors.shadow,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => Scaffold.of(context).openDrawer(),
           child: const Padding(
             padding: EdgeInsets.all(10),
-            child: Icon(Icons.menu, size: 22),
+            child: Icon(Icons.menu, size: 22, color: AppColors.textPrimary),
           ),
         ),
       ),
