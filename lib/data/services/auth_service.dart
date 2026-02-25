@@ -1,67 +1,75 @@
+import 'package:dio/dio.dart';
+import 'package:app_rtsg_client/data/network/dio_client.dart';
+
 import 'package:app_rtsg_client/data/models/request/login_request.dart';
 import 'package:app_rtsg_client/data/models/response/login_response.dart';
-import 'package:app_rtsg_client/data/models/response/login_response_error.dart';
-import 'package:app_rtsg_client/data/network/dio_client.dart';
-import 'package:dio/dio.dart';
 
 class AuthService {
   final Dio _dio = ApiClient.dio;
 
-  Future<LoginResponse> login(LoginRequest loginRequest) async {
+  Future<LoginResponse> login(LoginRequest req) async {
     try {
-      final Response response = await _dio.post(
+      final res = await _dio.post(
         '/auth',
-        data: {
-          "user": loginRequest.userName,
-          "password": loginRequest.password,
-        },
+        data: {"user": req.userName, "password": req.password},
       );
-      return LoginResponse.fromJson(response.data);
+      return LoginResponse.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      if (e.response?.statusCode == 500) {
-        try {
-          final err = LoginResponseError.fromJson(e.response?.data);
-          throw Exception("Error del servidor: ${err.observacion}");
-        } catch (_) {
-          throw Exception("Error del servidor (500)");
-        }
-      }
-      final msg = e.response?.data is Map<String, dynamic>
-          ? (e.response?.data['message'] ?? e.message)
-          : e.message;
-      throw Exception("Error de autenticación: $msg");
-    } catch (e) {
-      throw Exception("Error de inicio de sesión: $e");
+      throw Exception(_extractMessage(e));
     }
   }
 
-  Future<void> registerDevice(String deviceCode) async {
+  /// 🔎 Consultar cliente por código (ya lo estabas usando)
+  Future<Map<String, dynamic>> fetchClientByCode(String code) async {
     try {
-      final response = await _dio.post(
-        '/register/device',
-        data: {"device_code": deviceCode},
+      final res = await _dio.get(
+        '/usuarios/mostrar.clientes',
+        queryParameters: {"codigocliente": code},
       );
-
-      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-        final map = response.data as Map<String, dynamic>;
-        final ok = map['ok'] == true;
-
-        if (!ok) {
-          final msg = map['error'] ?? map['message'] ?? 'Error desconocido';
-          throw Exception('Error al registrar dispositivo: $msg');
-        }
-        print('✅ Dispositivo registrado correctamente: ${map['message']}');
-        return;
-      } else {
-        throw Exception('Respuesta inesperada del servidor');
+      if (res.data is Map<String, dynamic>) {
+        return res.data as Map<String, dynamic>;
       }
+      throw Exception("Cliente no encontrado");
     } on DioException catch (e) {
-      final msg = e.response?.data is Map<String, dynamic>
-          ? (e.response?.data['error'] ?? e.response?.data['message'])
-          : e.message;
-      throw Exception('Error al registrar dispositivo: $msg');
-    } catch (e) {
-      throw Exception('Error general al registrar dispositivo: $e');
+      throw Exception(_extractMessage(e));
     }
+  }
+
+  /// ✅ Generar clave (endpoint nuevo)
+  Future<void> generatePassword({required String email}) async {
+    try {
+      await _dio.post('/api/v1/generar', data: {"correo": email});
+    } on DioException catch (e) {
+      throw Exception(_extractMessage(e));
+    }
+  }
+
+  /// ✅ Actualizar usuario (endpoint nuevo)
+  Future<void> updateUser(Map<String, dynamic> payload) async {
+    try {
+      await _dio.post('/usuarios/actualizar.usuario', data: payload);
+    } on DioException catch (e) {
+      throw Exception(_extractMessage(e));
+    }
+  }
+
+  /// 🟡 Crear usuario: pendiente (simulado por ahora)
+  Future<void> register({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    // Por ahora NO se llama en producción (pendiente)
+    await Future.delayed(const Duration(milliseconds: 700));
+  }
+
+  String _extractMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      final msg = (data['error'] ?? data['message'] ?? '').toString();
+      if (msg.trim().isNotEmpty) return msg;
+    }
+    return e.message ?? 'Auth error';
   }
 }

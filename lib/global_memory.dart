@@ -1,69 +1,48 @@
-import 'package:app_rtsg_client/data/models/client_model.dart';
 import 'package:app_rtsg_client/data/models/user_model.dart';
 import 'package:app_rtsg_client/data/services/local_storage_service.dart';
 import 'package:get/get.dart';
 
 class GlobalMemory extends GetxController {
-  late final LocalStorage _localStorage;
-
-  GlobalMemory() {
-    _localStorage = Get.find<LocalStorage>();
-  }
+  final LocalStorage _localStorage = Get.find<LocalStorage>();
 
   static GlobalMemory get to => Get.find<GlobalMemory>();
 
   // Usuario básico (del login)
-  User? _user;
+  final Rxn<User> userRx = Rxn<User>();
 
-  // Driver completo (del endpoint /user/driver)
-  Client? _driverData;
+  // Empresa (si la necesitas en UI)
+  final Rxn<int> companyIdRx = Rxn<int>();
 
-  // Versión reactiva para escuchar cambios del driver
-  final Rxn<Client> driverRx = Rxn<Client>();
-
-  // Otros estados globales que ya tenías
-  RxList bases = [].obs;
-  RxBool ifCarrera = false.obs;
+  // Otros estados globales (si los usas)
+  final RxList bases = [].obs;
+  final RxBool hasActiveTrip = false.obs;
 
   /// Cerrar sesión: limpia storage y memoria
   Future<void> logout() async {
     await _localStorage.clearData();
-    _user = null;
-    _driverData = null;
-    driverRx.value = null;
+    userRx.value = null;
+    companyIdRx.value = null;
     bases.clear();
-    ifCarrera.value = false;
+    hasActiveTrip.value = false;
   }
 
-  /// USER BÁSICO (el que guardas en el login)
   Future<User?> getUser({bool forceRefresh = false}) async {
-    if (!forceRefresh && _user != null) return _user;
+    if (!forceRefresh && userRx.value != null) return userRx.value;
 
-    _user = await _localStorage.getUser();
-    return _user;
+    final u = await _localStorage.getUser();
+    userRx.value = u;
+    return u;
   }
 
   Future<void> setUser(User user) async {
-    _user = user;
+    userRx.value = user;
     await _localStorage.saveUser(user);
   }
 
-  /// DRIVER COMPLETO (del /user/driver)
-  void setDriverData(Client driverData) {
-    _driverData = driverData;
-    driverRx.value = driverData;
-  }
+  Future<String?> getToken() async => _localStorage.getToken();
 
-  Client? get driverData => _driverData;
+  Future<void> setToken(String token) async => _localStorage.saveToken(token);
 
-  /// Token (por si lo necesitas desde aquí)
-  Future<String?> getToken() async {
-    return _localStorage.getToken();
-  }
-
-  Future<Client?> getDriverData() async {
-    return _driverData;
-  }
-
-  Map<String, int> rango = {"1M": 1, "3M": 3, "6M": 6, "1A": 12};
+  // Handy getter
+  User? get user => userRx.value;
 }

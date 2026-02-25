@@ -1,7 +1,6 @@
+import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import 'package:app_taxis/src/routes/app_pages.dart';
 
 class UserScreen extends StatelessWidget {
   const UserScreen({super.key});
@@ -26,7 +25,7 @@ class UserScreen extends StatelessWidget {
                   width: height * 0.05,
                   child: IconButton(
                     onPressed: () {
-                      Get.toNamed(Routes.DASHBOARD);
+                      Get.toNamed(AppRoutes.SPLASH);
                     },
                     icon: const Icon(
                       Icons.navigate_before_outlined,
@@ -45,8 +44,9 @@ class UserScreen extends StatelessWidget {
             Stack(
               children: [
                 CircleAvatar(
-                  backgroundImage:
-                      const AssetImage("assets/images/avatar_driver.png"),
+                  backgroundImage: const AssetImage(
+                    "assets/images/avatar_driver.png",
+                  ),
                   radius: height * 0.1, // Tamaño del círculo
                   // Aquí puedes establecer la imagen del perfil si es necesario
                   // backgroundImage: AssetImage('ruta_de_la_imagen.jpg'),
@@ -68,8 +68,8 @@ class UserScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(
-                height:
-                    20), // Espacio entre la imagen de perfil y los campos de texto
+              height: 20,
+            ), // Espacio entre la imagen de perfil y los campos de texto
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -106,12 +106,13 @@ class UserScreen extends StatelessWidget {
                 child: const Text(
                   'Actualizar',
                   style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -122,9 +123,7 @@ class UserScreen extends StatelessWidget {
     return TextField(
       decoration: InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
         prefixIcon: icon != null ? Icon(icon) : null,
       ),
     );

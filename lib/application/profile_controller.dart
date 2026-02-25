@@ -29,7 +29,7 @@ class ProfileController extends GetxController {
   }
 
   Future<void> _loadClient() async {
-    currentClient.value = await _globalMemory.getDriverData();
+    //currentClient.value = await _globalMemory.getDriverData();
   }
 
   /// UI calls this to request showing bottom sheet

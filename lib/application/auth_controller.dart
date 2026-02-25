@@ -1,109 +1,81 @@
-import 'package:app_rtsg_client/data/models/request/login_request.dart';
-import 'package:app_rtsg_client/data/models/response/login_response.dart';
-import 'package:app_rtsg_client/data/services/local_storage_service.dart';
-import 'package:app_rtsg_client/global_memory.dart';
+import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:app_rtsg_client/data/models/request/login_request.dart';
+import 'package:app_rtsg_client/data/services/auth_service.dart';
+import 'package:app_rtsg_client/global_memory.dart';
+
 class AuthController extends GetxController {
-  final LocalStorage localStorage;
-  AuthController({required this.localStorage});
+  final AuthService _authService;
+  final GlobalMemory _memory = GlobalMemory.to;
 
-  RxBool isLoading = false.obs;
-  RxBool isVisible = false.obs;
-  final TextEditingController userNameController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final error = ''.obs;
-  late LoginResponse loginResponse;
+  AuthController({required AuthService authService})
+    : _authService = authService;
 
-  void login() async {
-    Get.focusScope!.unfocus();
+  final RxBool isLoading = false.obs;
+  final RxBool isPasswordVisible = false.obs;
+
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  final RxString error = ''.obs;
+
+  Future<void> login() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    error.value = '';
     isLoading.value = true;
 
-    if (await validate()) {
-      // Muestra el mensaje de bienvenida
+    try {
+      final email = emailController.text.trim();
+      final pass = passwordController.text.trim();
+
+      if (email.isEmpty || pass.isEmpty) {
+        throw Exception('Please enter your credentials');
+      }
+
+      final res = await _authService.login(LoginRequest(email, pass));
+
+      if (res.ok != true) {
+        throw Exception(res.error ?? res.message ?? 'Invalid credentials');
+      }
+
+      final token = res.token;
+      final user = res.data?.user;
+
+      if (token == null || token.trim().isEmpty)
+        throw Exception('Token not received');
+      if (user == null) throw Exception('User not received');
+
+      await _memory.setToken(token);
+      await _memory.setUser(user);
+
+      Get.offAllNamed(AppRoutes.HOME);
+    } catch (e) {
+      error.value = e.toString().replaceFirst('Exception: ', '');
       Get.snackbar(
-        "Bienvenido",
-        GlobalMemory.to.user!.nombresUsuario.split(' ')[2],
-        snackPosition: SnackPosition.BOTTOM,
-        colorText: Colors.black,
-        icon: const Icon(Icons.time_to_leave_outlined, color: Colors.green),
-      );
-      // Redirigir al Splash
-      Get.offAndToNamed(Routes.SPLASH);
-    } else {
-      // Mostrar el mensaje de error
-      isLoading.value = false;
-      Get.snackbar(
-        "Error",
+        'Error',
         error.value,
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color.fromARGB(255, 32, 32, 32),
+        backgroundColor: const Color(0xFF202020),
         colorText: Colors.white,
-        borderRadius: 10,
         margin: const EdgeInsets.all(10),
-        borderWidth: 1,
-        icon: const Icon(Icons.error, color: Colors.white),
+        borderRadius: 10,
       );
-    }
-  }
-
-  Future<bool> validate() async {
-    if (userNameController.text.isEmpty || passwordController.text.isEmpty) {
-      error.value = 'Ingrese sus credenciales';
+    } finally {
       isLoading.value = false;
-      return false;
-    }
-    return await _toLogin();
-  }
-
-  Future<bool> _toLogin() async {
-    try {
-      LoginRequest loginRequest = LoginRequest(
-        userNameController.text.trim(),
-        passwordController.text.trim(),
-      );
-      loginResponse = await AuthenticationService.login(loginRequest);
-
-      if (loginResponse.estado == true) {
-        if (_isValidRole(loginResponse.datos!.rolid)) {
-          if (loginResponse.datos!.unidad == null) {
-            error.value =
-                "Al parecer no tienes una unidad asignada, contactate con el administrador";
-            return false;
-          }
-          // Almacena el token y datos del usuario
-          await _storeUserData(loginResponse);
-          return true;
-        } else {
-          error.value =
-              "Al parecer no eres conductor o socio, contactate con el administrador";
-          return false;
-        }
-      } else {
-        error.value = loginResponse.observacion!;
-        return false;
-      }
-    } catch (e) {
-      error.value = "Error: $e";
-      return false;
     }
   }
 
-  bool _isValidRole(int rolid) {
-    return rolid == 1 || rolid == 3 || rolid == 4;
+  Future<void> logout() async {
+    await _memory.logout();
+    Get.offAllNamed(AppRoutes.LOGIN);
   }
 
-  Future<void> _storeUserData(LoginResponse response) async {
-    await GlobalMemory.to.box.write("token", response.token);
-    await GlobalMemory.to.box.write("user", response.datos);
-    await GlobalMemory.to.box.write("unity", response.datos!.unidad![0]);
-    GlobalMemory.to.user = response.datos;
-    GlobalMemory.to.unity = response.datos!.unidad![0];
-  }
-
-  void logout() async {
-    await GlobalMemory.to.box.erase();
-    Get.offAndToNamed(Routes.LOGIN);
+  @override
+  void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.onClose();
   }
 }
