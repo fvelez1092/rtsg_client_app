@@ -1,5 +1,7 @@
 import 'package:app_rtsg_client/presentation/pages/auth/login/login_page.dart';
 import 'package:app_rtsg_client/presentation/pages/home/home_binding.dart';
+import 'package:app_rtsg_client/presentation/pages/profile/profile_binding.dart';
+import 'package:app_rtsg_client/presentation/pages/profile/profile_page.dart';
 import 'package:get/get.dart';
 
 import 'package:app_rtsg_client/presentation/pages/home/home_page.dart';
@@ -31,11 +33,11 @@ abstract class AppPages {
     //   page: () => const TripsScreen(),
     //   binding: TripBinding(initial: const LatLng(-0.18065, -78.46783)),
     // ),
-    // GetPage(
-    //   name: AppRoutes.PROFILE,
-    //   page: () => ProfileScreen(),
-    //   binding: ProfileBinding(),
-    // ),
+    GetPage(
+      name: AppRoutes.PROFILE,
+      page: () => ProfilePage(),
+      binding: ProfileBinding(),
+    ),
     // GetPage(
     //   name: AppRoutes.EDIT_PROFILE,
     //   page: () => const EditProfileScreen(),

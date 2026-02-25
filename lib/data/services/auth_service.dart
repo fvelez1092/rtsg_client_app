@@ -1,36 +1,39 @@
+import 'package:app_rtsg_client/data/models/request/login_request.dart';
+import 'package:app_rtsg_client/data/models/response/login_response.dart';
+import 'package:app_rtsg_client/data/models/response/login_response_error.dart';
 import 'package:app_rtsg_client/data/network/dio_client.dart';
 import 'package:dio/dio.dart';
 
 class AuthService {
   final Dio _dio = ApiClient.dio;
 
-  // Future<LoginResponse> login(LoginRequest loginRequest) async {
-  //   try {
-  //     final Response response = await _dio.post(
-  //       '/auth',
-  //       data: {
-  //         "user": loginRequest.userName,
-  //         "password": loginRequest.password,
-  //       },
-  //     );
-  //     return LoginResponse.fromJson(response.data);
-  //   } on DioException catch (e) {
-  //     if (e.response?.statusCode == 500) {
-  //       try {
-  //         final err = LoginResponseError.fromJson(e.response?.data);
-  //         throw Exception("Error del servidor: ${err.observacion}");
-  //       } catch (_) {
-  //         throw Exception("Error del servidor (500)");
-  //       }
-  //     }
-  //     final msg = e.response?.data is Map<String, dynamic>
-  //         ? (e.response?.data['message'] ?? e.message)
-  //         : e.message;
-  //     throw Exception("Error de autenticación: $msg");
-  //   } catch (e) {
-  //     throw Exception("Error de inicio de sesión: $e");
-  //   }
-  // }
+  Future<LoginResponse> login(LoginRequest loginRequest) async {
+    try {
+      final Response response = await _dio.post(
+        '/auth',
+        data: {
+          "user": loginRequest.userName,
+          "password": loginRequest.password,
+        },
+      );
+      return LoginResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 500) {
+        try {
+          final err = LoginResponseError.fromJson(e.response?.data);
+          throw Exception("Error del servidor: ${err.observacion}");
+        } catch (_) {
+          throw Exception("Error del servidor (500)");
+        }
+      }
+      final msg = e.response?.data is Map<String, dynamic>
+          ? (e.response?.data['message'] ?? e.message)
+          : e.message;
+      throw Exception("Error de autenticación: $msg");
+    } catch (e) {
+      throw Exception("Error de inicio de sesión: $e");
+    }
+  }
 
   Future<void> registerDevice(String deviceCode) async {
     try {

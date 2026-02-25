@@ -5,11 +5,13 @@ abstract class ApiConstants {
 
   /// Idioma de la respuesta de direcciones
   static const String mapboxLanguage = 'es';
+  static const String mapboxDirectionsPath = '/directions/v5/mapbox';
 
   /// Tipos priorizados (puedes ajustar según tu caso)
   static const String mapboxTypes = 'address,place,locality,neighborhood,poi';
   static const String mapboxAccessToken =
       "pk.eyJ1IjoiY2VpYm9jb2RldGVjaCIsImEiOiJjbWtoM3E3eW0wZW5pM3BxMGIzOGQ5dm92In0.o2tWBoUaFRYIlo8tX_bu9A";
+
   static const String versionAPI = "v1";
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;
