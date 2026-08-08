@@ -1,4 +1,4 @@
-import 'package:app_rtsg_client/application/home_controller.dart';
+import 'package:app_rtsg_client/application/home2_controller.dart';
 import 'package:app_rtsg_client/application/trip_controller.dart';
 import 'package:app_rtsg_client/data/models/map_point_result_model.dart';
 import 'package:app_rtsg_client/presentation/pages/map/map_select_page.dart';
@@ -18,7 +18,7 @@ class RouteInputSheet extends GetView<TripController> {
 
   @override
   Widget build(BuildContext context) {
-    final home = Get.find<HomeController>();
+    final home = Get.find<Home2Controller>();
 
     return SafeArea(
       top: false,

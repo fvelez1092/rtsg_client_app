@@ -40,12 +40,8 @@ class RtsgClientApp extends StatelessWidget {
       title: 'RTSG Client App',
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
-
-      // ✅ Arranque por Splash
-      initialRoute: AppRoutes.HOME,
+      initialRoute: AppRoutes.DASHBOARD,
       //initialBinding: SplashBinding(),
-
-      // ✅ Tus páginas
       getPages: AppPages.pages,
     );
   }

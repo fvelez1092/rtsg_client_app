@@ -6,8 +6,8 @@ import 'package:get/get.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'route_input_sheet.dart';
 
-class HomeTripPanel extends GetView<TripController> {
-  const HomeTripPanel({super.key});
+class TripPanel extends GetView<TripController> {
+  const TripPanel({super.key});
 
   @override
   Widget build(BuildContext context) {

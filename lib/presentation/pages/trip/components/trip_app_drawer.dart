@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 
-class HomeAppDrawer extends StatelessWidget {
-  const HomeAppDrawer({super.key});
+class TripAppDrawer extends StatelessWidget {
+  const TripAppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {

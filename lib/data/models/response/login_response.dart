@@ -8,15 +8,15 @@ LoginResponse loginResponseFromJson(String str) =>
 String loginResponseToJson(LoginResponse data) => json.encode(data.toJson());
 
 class LoginResponse {
-  final bool ok;
-  final int? status;
+  final bool? ok;
+  final bool? status;
   final String? message;
   final Data? data;
   final String? error;
   final String? token;
 
   LoginResponse({
-    required this.ok,
+    this.ok,
     this.status,
     this.message,
     this.data,
@@ -26,8 +26,8 @@ class LoginResponse {
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) => LoginResponse(
     ok: json["ok"],
-    status: json["status"],
-    message: json["message"],
+    status: json["status"] ?? json["estado"],
+    message: json["message"] ?? json["observacion"],
     data: json["data"] == null ? null : Data.fromJson(json["data"]),
     error: json["error"],
     token: json["token"],

@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 class ApiInterceptor extends Interceptor {
   final _storage = LocalStorage();
 
-  static const List<String> _publicPaths = ['/auth'];
+  static const List<String> _publicPaths = ['/acceder'];
 
   bool _isPublic(RequestOptions options) {
     final p = options.path.toLowerCase();

@@ -10,7 +10,7 @@ class AuthService {
   Future<LoginResponse> login(LoginRequest req) async {
     try {
       final res = await _dio.post(
-        '/auth',
+        '/acceder',
         data: {"user": req.userName, "password": req.password},
       );
       return LoginResponse.fromJson(res.data as Map<String, dynamic>);
