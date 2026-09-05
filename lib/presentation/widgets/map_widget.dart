@@ -123,9 +123,9 @@ class _MapPickerState extends State<MapPicker> {
       return;
     }
 
-    if (widget.initialCenter != oldWidget.initialCenter) {
-      final currentZoom = _mapController.camera.zoom;
-      _mapController.move(widget.initialCenter, currentZoom);
+    if (widget.initialCenter != oldWidget.initialCenter ||
+        widget.initialZoom != oldWidget.initialZoom) {
+      _mapController.move(widget.initialCenter, widget.initialZoom);
     }
   }
 
@@ -208,7 +208,6 @@ class _MapPickerState extends State<MapPicker> {
               subdomains: widget.subdomains,
               userAgentPackageName: widget.userAgentPackageName,
             ),
-
             if (widget.showPath && widget.path.length >= 2)
               PolylineLayer(
                 polylines: [
@@ -224,14 +223,12 @@ class _MapPickerState extends State<MapPicker> {
                   ),
                 ],
               ),
-
             if (widget.showUserMarker && user != null)
               MarkerLayer(
                 markers: [
                   Marker(point: user, width: 44, height: 44, child: _userDot()),
                 ],
               ),
-
             if (widget.showDestinationMarker && destination != null)
               MarkerLayer(
                 markers: [
@@ -243,7 +240,6 @@ class _MapPickerState extends State<MapPicker> {
                   ),
                 ],
               ),
-
             if (widget.showDriverMarker && driver != null)
               MarkerLayer(
                 markers: [
@@ -261,7 +257,6 @@ class _MapPickerState extends State<MapPicker> {
               ),
           ],
         ),
-
         if (widget.showCrosshair)
           const IgnorePointer(
             child: Icon(
@@ -270,7 +265,6 @@ class _MapPickerState extends State<MapPicker> {
               color: AppColors.textPrimary,
             ),
           ),
-
         Positioned(
           top: 12,
           child: AnimatedOpacity(
@@ -289,7 +283,6 @@ class _MapPickerState extends State<MapPicker> {
             ),
           ),
         ),
-
         if (widget.showAttribution)
           Positioned(
             right: 8,
