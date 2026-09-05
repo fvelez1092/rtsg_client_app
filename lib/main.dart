@@ -6,7 +6,6 @@ import 'package:app_rtsg_client/core/theme/light_theme.dart';
 import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:app_rtsg_client/data/services/local_storage_service.dart';
 import 'package:app_rtsg_client/global_memory.dart';
-import 'package:app_rtsg_client/presentation/pages/splash/splash_binding.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
 Future<void> initGlobalServices() async {
@@ -40,8 +39,7 @@ class RtsgClientApp extends StatelessWidget {
       title: 'RTSG Client App',
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
-      initialRoute: AppRoutes.DASHBOARD,
-      //initialBinding: SplashBinding(),
+      initialRoute: AppRoutes.SPLASH,
       getPages: AppPages.pages,
     );
   }
