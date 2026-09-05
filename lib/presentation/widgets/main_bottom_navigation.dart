@@ -11,12 +11,21 @@ class MainBottomNavigation extends StatelessWidget {
 
   final int currentIndex;
 
+  bool get _isInsideDashboardShell {
+    return const {
+      AppRoutes.DASHBOARD,
+      AppRoutes.HOME,
+      AppRoutes.ACTIVITY,
+      AppRoutes.WALLET,
+      AppRoutes.ACCOUNT,
+    }.contains(Get.currentRoute);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Dentro de Dashboard la navegación pertenece exclusivamente al shell
-    // flotante. Las páginas conservan este widget solo para acceso directo
-    // por rutas individuales.
-    if (Get.currentRoute == AppRoutes.DASHBOARD) {
+    // Las páginas principales se renderizan dentro de DashboardPage.
+    // Ahí la única navegación visible debe ser la barra flotante del shell.
+    if (_isInsideDashboardShell) {
       return const SizedBox.shrink();
     }
 
@@ -51,21 +60,7 @@ class MainBottomNavigation extends StatelessWidget {
         selectedIndex: currentIndex,
         onDestinationSelected: (index) {
           if (index == currentIndex) return;
-
-          switch (index) {
-            case 0:
-              Get.offNamed(AppRoutes.HOME);
-              break;
-            case 1:
-              Get.offNamed(AppRoutes.ACTIVITY);
-              break;
-            case 2:
-              Get.offNamed(AppRoutes.WALLET);
-              break;
-            case 3:
-              Get.offNamed(AppRoutes.ACCOUNT);
-              break;
-          }
+          Get.offAllNamed(AppRoutes.DASHBOARD, arguments: {'tab': index});
         },
         destinations: const [
           NavigationDestination(
