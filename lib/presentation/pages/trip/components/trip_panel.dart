@@ -19,13 +19,16 @@ class TripPanel extends GetView<TripController> {
 
   void _openLocation(RouteSelectMode mode) {
     controller.openDestinationSheet();
-    Get.bottomSheet(
-      RouteInputSheet(
-        onClose: () => Get.back(),
-        mode: mode,
+
+    Get.to(
+      () => Scaffold(
+        backgroundColor: AppColors.surface,
+        body: RouteInputSheet(
+          onClose: () => Get.back(),
+          mode: mode,
+        ),
       ),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      transition: Transition.cupertino,
     );
   }
 
@@ -75,89 +78,13 @@ class TripPanel extends GetView<TripController> {
               ),
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isReservation ? 'Programa tu viaje' : '¿A dónde vamos?',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      isReservation && reservationLabel != null
-                          ? reservationLabel!
-                          : 'Selecciona tu origen y destino',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Obx(() {
-                final hasRoute =
-                    controller.destinationLatLng.value != null ||
-                    controller.destinationAddress.value.trim().isNotEmpty;
-
-                if (!hasRoute) return const SizedBox.shrink();
-
-                return IconButton.filledTonal(
-                  tooltip: 'Limpiar ruta',
-                  onPressed: controller.resetTrip,
-                  icon: const Icon(Icons.close_rounded),
-                );
-              }),
-            ],
+          _Header(
+            isReservation: isReservation,
+            reservationLabel: reservationLabel,
+            onReset: controller.resetTrip,
           ),
           const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.inputFill,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.borderSoft),
-            ),
-            child: Column(
-              children: [
-                Obx(
-                  () => _LocationRow(
-                    dotColor: AppColors.brandGreen,
-                    icon: Icons.my_location_rounded,
-                    label: 'Punto de partida',
-                    value: controller.originAddress.value.isEmpty
-                        ? 'Usar mi ubicación'
-                        : controller.originAddress.value,
-                    onTap: () => _openLocation(RouteSelectMode.origin),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 54),
-                  child: Divider(height: 1, color: AppColors.borderSoft),
-                ),
-                Obx(
-                  () => _LocationRow(
-                    dotColor: AppColors.brandRed,
-                    icon: Icons.location_on_rounded,
-                    label: 'Destino',
-                    value: controller.destinationAddress.value.isEmpty
-                        ? '¿A dónde vas?'
-                        : controller.destinationAddress.value,
-                    emphasize: controller.destinationAddress.value.isEmpty,
-                    onTap: () => _openLocation(RouteSelectMode.destination),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _RouteInputs(onOpen: _openLocation),
           Obx(() {
             final calculating = controller.isCalculating.value;
             final hasRoute =
@@ -175,7 +102,7 @@ class TripPanel extends GetView<TripController> {
 
             if (calculating) {
               return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 22),
+                padding: EdgeInsets.symmetric(vertical: 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -200,49 +127,7 @@ class TripPanel extends GetView<TripController> {
               );
             }
 
-            return Column(
-              children: [
-                const SizedBox(height: 16),
-                _RideOptionCard(
-                  fare: controller.estimatedFare.value,
-                  durationMin: controller.durationMin.value,
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderSoft),
-                  ),
-                  child: Row(
-                    children: [
-                      _Metric(
-                        icon: Icons.route_rounded,
-                        value:
-                            '${controller.distanceKm.value.toStringAsFixed(1)} km',
-                        label: 'Distancia',
-                      ),
-                      Container(
-                        width: 1,
-                        height: 34,
-                        color: AppColors.borderSoft,
-                      ),
-                      _Metric(
-                        icon: Icons.schedule_rounded,
-                        value: '${controller.durationMin.value} min',
-                        label: 'Trayecto',
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const _PaymentTile(),
-              ],
-            );
+            return const _RideConfiguration();
           }),
           Obx(() {
             final status = controller.status.value;
@@ -297,16 +182,15 @@ class TripPanel extends GetView<TripController> {
           }),
           const SizedBox(height: 16),
           Obx(() {
-            final enabled = controller.canCreateTrip;
             final status = controller.status.value;
+            if (status != TripStatus.idle) return const SizedBox.shrink();
 
-            if (status != TripStatus.idle) {
-              return const SizedBox.shrink();
-            }
+            final enabled = controller.canCreateTrip;
+            final hasRoute = controller.distanceKm.value > 0;
 
             return SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 58,
               child: FilledButton(
                 onPressed: enabled ? controller.createTrip : null,
                 style: FilledButton.styleFrom(
@@ -315,11 +199,13 @@ class TripPanel extends GetView<TripController> {
                   disabledBackgroundColor: AppColors.borderSoft,
                   disabledForegroundColor: AppColors.textSecondary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(17),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                 ),
                 child: Text(
-                  isReservation ? 'Programar viaje' : 'Solicitar viaje',
+                  hasRoute
+                      ? '${isReservation ? 'Programar' : 'Solicitar'}  •  \$${controller.finalFare.toStringAsFixed(2)}'
+                      : (isReservation ? 'Programar viaje' : 'Solicitar viaje'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -328,6 +214,523 @@ class TripPanel extends GetView<TripController> {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class _Header extends GetView<TripController> {
+  final bool isReservation;
+  final String? reservationLabel;
+  final VoidCallback onReset;
+
+  const _Header({
+    required this.isReservation,
+    required this.reservationLabel,
+    required this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isReservation ? 'Programa tu viaje' : '¿A dónde vamos?',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                isReservation && reservationLabel != null
+                    ? reservationLabel!
+                    : 'Selecciona tu origen y destino',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Obx(() {
+          final hasRoute =
+              controller.destinationLatLng.value != null ||
+              controller.destinationAddress.value.trim().isNotEmpty;
+
+          if (!hasRoute) return const SizedBox.shrink();
+
+          return IconButton.filledTonal(
+            tooltip: 'Limpiar ruta',
+            onPressed: onReset,
+            icon: const Icon(Icons.close_rounded),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _RouteInputs extends GetView<TripController> {
+  final void Function(RouteSelectMode mode) onOpen;
+
+  const _RouteInputs({required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.inputFill,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Column(
+        children: [
+          Obx(
+            () => _LocationRow(
+              dotColor: AppColors.brandGreen,
+              icon: Icons.my_location_rounded,
+              label: 'Punto de partida',
+              value: controller.originAddress.value.isEmpty
+                  ? 'Usar mi ubicación'
+                  : controller.originAddress.value,
+              onTap: () => onOpen(RouteSelectMode.origin),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 54),
+            child: Divider(height: 1, color: AppColors.borderSoft),
+          ),
+          Obx(
+            () => _LocationRow(
+              dotColor: AppColors.brandRed,
+              icon: Icons.location_on_rounded,
+              label: 'Destino',
+              value: controller.destinationAddress.value.isEmpty
+                  ? '¿A dónde vas?'
+                  : controller.destinationAddress.value,
+              emphasize: controller.destinationAddress.value.isEmpty,
+              onTap: () => onOpen(RouteSelectMode.destination),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideConfiguration extends GetView<TripController> {
+  const _RideConfiguration();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderSoft),
+          ),
+          child: Row(
+            children: [
+              _Metric(
+                icon: Icons.route_rounded,
+                value: '${controller.distanceKm.value.toStringAsFixed(1)} km',
+                label: 'Distancia',
+              ),
+              Container(width: 1, height: 34, color: AppColors.borderSoft),
+              _Metric(
+                icon: Icons.schedule_rounded,
+                value: '${controller.durationMin.value} min',
+                label: 'Trayecto',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        const _SectionTitle(
+          title: 'Elige tu servicio',
+          subtitle: 'Selecciona la categoría que prefieras para este viaje.',
+        ),
+        const SizedBox(height: 10),
+        Obx(
+          () => _CategoryCard(
+            category: TripCategory.normal,
+            title: 'Normal',
+            subtitle: 'Servicio RTSG para tu viaje diario',
+            icon: Icons.local_taxi_rounded,
+            fare: controller.normalFare,
+            selected: controller.selectedCategory.value == TripCategory.normal,
+            onTap: () => controller.selectCategory(TripCategory.normal),
+          ),
+        ),
+        const SizedBox(height: 9),
+        Obx(
+          () => _CategoryCard(
+            category: TripCategory.vip,
+            title: 'VIP / Ejecutivo',
+            subtitle: 'Mayor comodidad y atención preferente',
+            icon: Icons.workspace_premium_rounded,
+            fare: controller.vipFare,
+            selected: controller.selectedCategory.value == TripCategory.vip,
+            onTap: () => controller.selectCategory(TripCategory.vip),
+          ),
+        ),
+        const SizedBox(height: 20),
+        const _SectionTitle(
+          title: 'Mejora tu oferta',
+          subtitle:
+              'Si hay alta demanda, puedes aumentar el valor para facilitar que una unidad acepte el viaje.',
+        ),
+        const SizedBox(height: 10),
+        Obx(() {
+          final selected = controller.priceBoost.value;
+
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: TripController.priceBoostOptions.map((amount) {
+              final active = selected == amount;
+              final label = amount == 0
+                  ? 'Sin extra'
+                  : '+\$${amount.toStringAsFixed(2)}';
+
+              return ChoiceChip(
+                selected: active,
+                onSelected: (_) => controller.setPriceBoost(amount),
+                label: Text(label),
+                selectedColor: AppColors.brandGreen.withValues(alpha: 0.12),
+                backgroundColor: AppColors.surface,
+                side: BorderSide(
+                  color: active ? AppColors.brandGreen : AppColors.borderSoft,
+                ),
+                labelStyle: TextStyle(
+                  color: active
+                      ? AppColors.brandGreen
+                      : AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              );
+            }).toList(),
+          );
+        }),
+        const SizedBox(height: 10),
+        Obx(
+          () => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.inputFill,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.sell_outlined,
+                  size: 20,
+                  color: AppColors.brandGreen,
+                ),
+                const SizedBox(width: 9),
+                const Expanded(
+                  child: Text(
+                    'Oferta total del viaje',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  '\$${controller.finalFare.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        const _SectionTitle(
+          title: 'Método de pago',
+          subtitle: 'Por ahora los viajes se pagan únicamente en efectivo.',
+        ),
+        const SizedBox(height: 10),
+        const _PaymentMethodCard(
+          icon: Icons.payments_rounded,
+          title: 'Efectivo',
+          subtitle: 'Paga directamente al conductor',
+          enabled: true,
+        ),
+        const SizedBox(height: 8),
+        const _PaymentMethodCard(
+          icon: Icons.account_balance_wallet_rounded,
+          title: 'Billetera RTSG',
+          subtitle: 'Próximamente',
+          enabled: false,
+        ),
+        const SizedBox(height: 8),
+        const _PaymentMethodCard(
+          icon: Icons.credit_card_rounded,
+          title: 'Tarjeta',
+          subtitle: 'Próximamente',
+          enabled: false,
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryCard extends StatelessWidget {
+  final TripCategory category;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final double fare;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CategoryCard({
+    required this.category,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.fare,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? AppColors.brandGreen : AppColors.borderSoft,
+              width: selected ? 1.7 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: category == TripCategory.vip
+                      ? AppColors.taxiYellow.withValues(alpha: 0.22)
+                      : AppColors.brandGreen.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  icon,
+                  size: 29,
+                  color: category == TripCategory.vip
+                      ? AppColors.textPrimary
+                      : AppColors.brandGreen,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        if (selected) ...[
+                          const SizedBox(width: 7),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            size: 18,
+                            color: AppColors.brandGreen,
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '\$${fare.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool enabled;
+
+  const _PaymentMethodCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = enabled
+        ? AppColors.textPrimary
+        : AppColors.textSecondary.withValues(alpha: 0.70);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: enabled ? AppColors.surface : AppColors.inputFill,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: enabled ? AppColors.brandGreen : AppColors.borderSoft,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: enabled
+                  ? AppColors.brandGreen.withValues(alpha: 0.10)
+                  : AppColors.borderSoft.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: enabled ? AppColors.brandGreen : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: enabled
+                        ? AppColors.textSecondary
+                        : AppColors.textSecondary.withValues(alpha: 0.70),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (enabled)
+            const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.brandGreen,
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.borderSoft,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'Pronto',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -391,9 +794,7 @@ class _LocationRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: emphasize
-                          ? AppColors.textPrimary
-                          : AppColors.textPrimary,
+                      color: AppColors.textPrimary,
                       fontSize: 15,
                       fontWeight: emphasize ? FontWeight.w900 : FontWeight.w700,
                     ),
@@ -450,74 +851,6 @@ class _HintCard extends StatelessWidget {
   }
 }
 
-class _RideOptionCard extends StatelessWidget {
-  final double fare;
-  final int durationMin;
-
-  const _RideOptionCard({required this.fare, required this.durationMin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.brandGreen, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: AppColors.taxiYellow.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.local_taxi_rounded,
-              color: AppColors.textPrimary,
-              size: 31,
-            ),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'RTSG Taxi',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Viaje cómodo · aprox. $durationMin min',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '\$${fare.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _Metric extends StatelessWidget {
   final IconData icon;
   final String value;
@@ -555,54 +888,6 @@ class _Metric extends StatelessWidget {
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentTile extends StatelessWidget {
-  const _PaymentTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSoft),
-      ),
-      child: const Row(
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            color: AppColors.brandGreen,
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Método de pago',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  'Efectivo / Billetera RTSG',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
         ],
       ),
     );
