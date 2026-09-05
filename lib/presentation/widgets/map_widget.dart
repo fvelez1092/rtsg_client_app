@@ -117,7 +117,9 @@ class _MapPickerState extends State<MapPicker> {
       if (mounted) setState(() {});
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleFit(force: true));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scheduleFit(force: true),
+    );
   }
 
   @override
@@ -253,6 +255,51 @@ class _MapPickerState extends State<MapPicker> {
     );
   }
 
+  Widget _selectionMarker() {
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          const Positioned(
+            top: 3,
+            child: Icon(
+              Icons.location_on_rounded,
+              size: 52,
+              color: AppColors.shadow,
+            ),
+          ),
+          Icon(
+            Icons.location_on_rounded,
+            size: 52,
+            color: widget.polylineColor,
+          ),
+          Positioned(
+            top: 10,
+            child: Container(
+              width: 19,
+              height: 19,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: widget.polylineColor.withValues(alpha: 0.18),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.my_location_rounded,
+                size: 12,
+                color: widget.polylineColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final driver = widget.driverPosition;
@@ -333,12 +380,11 @@ class _MapPickerState extends State<MapPicker> {
             ],
           ),
           if (widget.showCrosshair)
-            const IgnorePointer(
+            IgnorePointer(
               child: Center(
-                child: Icon(
-                  Icons.add_location_alt_outlined,
-                  size: 34,
-                  color: AppColors.textPrimary,
+                child: Transform.translate(
+                  offset: const Offset(0, -26),
+                  child: _selectionMarker(),
                 ),
               ),
             ),
