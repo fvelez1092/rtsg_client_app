@@ -96,9 +96,66 @@ class TripPage extends GetView<Home2Controller> {
     );
   }
 
+  Widget _buildReservationBadge(String label) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 235),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(13),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.event_available_rounded,
+            size: 18,
+            color: AppColors.brandGreen,
+          ),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Viaje programado',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final trip = Get.find<TripController>();
+    final args = Get.arguments;
+    final reservationLabel = args is Map && args['isReservation'] == true
+        ? (args['reservationLabel'] ?? 'Reserva programada').toString()
+        : null;
 
     return Scaffold(
       drawer: const AppDrawer(),
@@ -143,6 +200,12 @@ class TripPage extends GetView<Home2Controller> {
                     );
                   }),
                   const Positioned(top: 12, left: 12, child: AppDrawerButton()),
+                  if (reservationLabel != null)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: _buildReservationBadge(reservationLabel),
+                    ),
                 ],
               ),
             ),
