@@ -243,12 +243,26 @@ class TripController extends GetxController {
   ];
 
   void selectCategory(TripCategory category) {
+    if (selectedCategory.value == category) return;
     selectedCategory.value = category;
+
+    // El panel principal observa distancia/tiempo para decidir su estado.
+    // Refrescamos la distancia para forzar su reconstrucción visual y que el
+    // cambio de categoría/precio se refleje inmediatamente.
+    distanceKm.refresh();
   }
 
   void setPriceBoost(double amount) {
     if (amount < 0) return;
-    priceBoost.value = _roundMoney(amount);
+
+    final next = _roundMoney(amount);
+    if (priceBoost.value == next) return;
+
+    priceBoost.value = next;
+
+    // La tarifa final es un getter derivado de categoría + extra. Forzamos la
+    // reconstrucción del panel para actualizar chip seleccionado y CTA.
+    distanceKm.refresh();
   }
 
   double get normalFare => _roundMoney(estimatedFare.value);
