@@ -19,9 +19,9 @@ class SplashController extends GetxController {
 
     if (hasToken) {
       await _memory.getUser(forceRefresh: true);
-      Get.offAllNamed(AppRoutes.HOME); // o tu ruta real
+      Get.offAllNamed(AppRoutes.DASHBOARD);
     } else {
-      Get.offAllNamed(AppRoutes.LOGIN); // o tu ruta real
+      Get.offAllNamed(AppRoutes.LOGIN);
     }
   }
 }
