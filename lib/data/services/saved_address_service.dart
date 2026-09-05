@@ -3,9 +3,26 @@ import 'package:get_storage/get_storage.dart';
 import 'package:app_rtsg_client/data/models/saved_address_model.dart';
 
 class SavedAddressService {
-  static const _key = 'SAVED_ADDRESSES';
-
   final GetStorage _storage = GetStorage();
+
+  String get _key {
+    final rawUser = _storage.read('USER');
+
+    if (rawUser is Map) {
+      final user = Map<String, dynamic>.from(rawUser);
+      final owner =
+          user['id_user'] ??
+          user['id_person'] ??
+          user['username'] ??
+          user['user'];
+
+      if (owner != null && owner.toString().trim().isNotEmpty) {
+        return 'SAVED_ADDRESSES_${owner.toString()}';
+      }
+    }
+
+    return 'SAVED_ADDRESSES_GUEST';
+  }
 
   List<SavedAddress> getAll() {
     final raw = _storage.read<List>(_key) ?? const [];
