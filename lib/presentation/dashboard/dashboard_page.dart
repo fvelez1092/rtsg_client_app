@@ -11,9 +11,9 @@ import 'package:get/get.dart';
 class DashboardPage extends GetView<DashboardController> {
   const DashboardPage({super.key});
 
-  static const double _navigationHeight = 70;
-  static const double _navigationBottomGap = 10;
-  static const double _contentGap = 12;
+  static const double _navigationHeight = 64;
+  static const double _navigationBottomGap = 8;
+  static const double _contentGap = 10;
 
   @override
   Widget build(BuildContext context) {
@@ -56,22 +56,22 @@ class DashboardPage extends GetView<DashboardController> {
             _navigationBottomGap,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(27),
             child: BackdropFilter(
               filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
               child: Container(
                 decoration: BoxDecoration(
                   color: colors.surface.withValues(alpha: 0.84),
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(27),
                   border: Border.all(
                     color: colors.onSurface.withValues(alpha: 0.055),
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: colors.scrim.withValues(alpha: 0.14),
-                      blurRadius: 22,
+                      blurRadius: 20,
                       spreadRadius: 0,
-                      offset: const Offset(0, 7),
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
@@ -82,11 +82,12 @@ class DashboardPage extends GetView<DashboardController> {
                     elevation: 0,
                     indicatorColor: colors.primary.withValues(alpha: 0.12),
                     indicatorShape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     labelTextStyle: WidgetStateProperty.resolveWith((states) {
                       final selected = states.contains(WidgetState.selected);
                       return theme.textTheme.labelSmall?.copyWith(
+                        fontSize: 11,
                         color: selected
                             ? colors.primary
                             : colors.onSurface.withValues(alpha: 0.58),
@@ -97,7 +98,7 @@ class DashboardPage extends GetView<DashboardController> {
                     iconTheme: WidgetStateProperty.resolveWith((states) {
                       final selected = states.contains(WidgetState.selected);
                       return IconThemeData(
-                        size: selected ? 26 : 24,
+                        size: selected ? 24 : 22,
                         color: selected
                             ? colors.primary
                             : colors.onSurface.withValues(alpha: 0.58),
