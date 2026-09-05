@@ -13,11 +13,16 @@ class MainBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dentro de Dashboard la navegación pertenece exclusivamente al shell
+    // flotante. Las páginas conservan este widget solo para acceso directo
+    // por rutas individuales.
+    if (Get.currentRoute == AppRoutes.DASHBOARD) {
+      return const SizedBox.shrink();
+    }
+
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    // Diseño original del Home: mismo NavigationBarTheme, indicador,
-    // tipografía e iconografía. Solo se mantiene activa la navegación.
     return NavigationBarTheme(
       data: NavigationBarThemeData(
         backgroundColor: colors.surface,
