@@ -48,51 +48,58 @@ class TripPage extends GetView<TripController> {
   }
 
   Widget _routeSummaryCard() {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 330),
-      padding: const EdgeInsets.fromLTRB(13, 10, 10, 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.97),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderSoft),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 14,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              children: [
-                _RouteSummaryLine(
-                  color: AppColors.brandGreen,
-                  text: controller.originAddress.value,
-                ),
-                const SizedBox(height: 7),
-                _RouteSummaryLine(
-                  color: AppColors.brandRed,
-                  text: controller.destinationAddress.value,
-                ),
-              ],
+    return SizedBox(
+      height: 74,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(13, 8, 8, 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.borderSoft),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 14,
+              offset: Offset(0, 5),
             ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(
-            onPressed: _openRouteEditor,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.brandGreen,
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _RouteSummaryLine(
+                    color: AppColors.brandGreen,
+                    text: controller.originAddress.value,
+                  ),
+                  const SizedBox(height: 6),
+                  _RouteSummaryLine(
+                    color: AppColors.brandRed,
+                    text: controller.destinationAddress.value,
+                  ),
+                ],
+              ),
             ),
-            child: const Text(
-              'Cambiar',
-              style: TextStyle(fontWeight: FontWeight.w800),
+            const SizedBox(width: 6),
+            TextButton(
+              onPressed: _openRouteEditor,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.brandGreen,
+                minimumSize: const Size(64, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Cambiar',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -295,7 +302,7 @@ class TripPage extends GetView<TripController> {
 
               return MapPicker(
                 initialCenter: mapCenter,
-                initialZoom: hasRoute ? 14.5 : 16,
+                initialZoom: hasRoute ? 14.8 : 16,
                 path: route,
                 showPath: hasRoute,
                 userPosition: origin,
@@ -316,41 +323,52 @@ class TripPage extends GetView<TripController> {
               );
             }),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-              child: Obx(() {
-                final hasDestination = controller.destinationLatLng.value != null;
 
-                if (hasDestination) {
+          // Overlay superior: siempre ocupa solo el alto de su contenido.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                child: Obx(() {
+                  final hasDestination =
+                      controller.destinationLatLng.value != null;
+
+                  if (hasDestination) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _roundBackButton(),
+                        const SizedBox(width: 10),
+                        Expanded(child: _routeSummaryCard()),
+                      ],
+                    );
+                  }
+
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _roundBackButton(),
-                      const SizedBox(width: 10),
-                      Expanded(child: _routeSummaryCard()),
+                      const Spacer(),
+                      if (reservationLabel != null)
+                        _reservationBadge(reservationLabel),
                     ],
                   );
-                }
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _roundBackButton(),
-                    const Spacer(),
-                    if (reservationLabel != null)
-                      _reservationBadge(reservationLabel),
-                  ],
-                );
-              }),
+                }),
+              ),
             ),
           ),
+
           Positioned(
             top: 88,
             left: 0,
             right: 0,
             child: Center(child: _originPickerCard()),
           ),
+
           Obx(() {
             final hasRoute =
                 controller.destinationLatLng.value != null &&
@@ -359,10 +377,11 @@ class TripPage extends GetView<TripController> {
 
             return Positioned(
               right: 10,
-              bottom: screenHeight * (hasRoute ? 0.58 : 0.36),
+              bottom: screenHeight * (hasRoute ? 0.50 : 0.36),
               child: _attribution(),
             );
           }),
+
           Obx(() {
             final hasRoute =
                 controller.destinationLatLng.value != null &&
@@ -371,11 +390,13 @@ class TripPage extends GetView<TripController> {
 
             return DraggableScrollableSheet(
               key: ValueKey(hasRoute),
-              initialChildSize: hasRoute ? 0.56 : 0.34,
-              minChildSize: hasRoute ? 0.44 : 0.28,
-              maxChildSize: hasRoute ? 0.86 : 0.54,
+              initialChildSize: hasRoute ? 0.48 : 0.34,
+              minChildSize: hasRoute ? 0.38 : 0.28,
+              maxChildSize: hasRoute ? 0.84 : 0.54,
               snap: true,
-              snapSizes: hasRoute ? const [0.56, 0.86] : const [0.34, 0.54],
+              snapSizes: hasRoute
+                  ? const [0.48, 0.84]
+                  : const [0.34, 0.54],
               builder: (context, scrollController) {
                 return TripPanel(
                   scrollController: scrollController,
@@ -400,6 +421,7 @@ class _RouteSummaryLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.max,
       children: [
         Container(
           width: 8,
