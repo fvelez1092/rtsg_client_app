@@ -33,14 +33,14 @@ class MainBottomNavigation extends StatelessWidget {
     return NavigationBarTheme(
       data: NavigationBarThemeData(
         backgroundColor: colors.surface,
-        indicatorColor: colors.primary.withValues(alpha: 0.16),
+        indicatorColor: colors.primary.withOpacity(0.16),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
 
           return theme.textTheme.labelSmall?.copyWith(
             color: selected
                 ? colors.primary
-                : colors.onSurface.withValues(alpha: 0.60),
+                : colors.onSurface.withOpacity(0.60),
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           );
         }),
@@ -50,7 +50,7 @@ class MainBottomNavigation extends StatelessWidget {
           return IconThemeData(
             color: selected
                 ? colors.primary
-                : colors.onSurface.withValues(alpha: 0.60),
+                : colors.onSurface.withOpacity(0.60),
           );
         }),
       ),
