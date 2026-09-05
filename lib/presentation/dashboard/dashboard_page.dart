@@ -116,6 +116,12 @@ class DashboardPage extends GetView<DashboardController> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final bottomSafeArea = MediaQuery.viewPaddingOf(context).bottom;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final availableNavigationWidth =
+        screenWidth - (_navigationHorizontalMargin * 2);
+    final expandedNavigationWidth = availableNavigationWidth
+        .clamp(_collapsedSize, _navigationMaxWidth)
+        .toDouble();
 
     return Obx(() {
       final navigationVisible = controller.isNavigationVisible.value;
@@ -175,51 +181,50 @@ class DashboardPage extends GetView<DashboardController> {
                 ? Alignment.bottomCenter
                 : Alignment.bottomLeft,
             heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _navigationMaxWidth),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                width: navigationVisible ? double.infinity : _collapsedSize,
-                height: navigationVisible
-                    ? _navigationHeight
-                    : _collapsedSize,
-                decoration: BoxDecoration(
-                  color: colors.surface.withValues(
-                    alpha: navigationVisible ? 0.84 : 0.90,
-                  ),
-                  borderRadius: BorderRadius.circular(
-                    navigationVisible ? 27 : _collapsedSize / 2,
-                  ),
-                  border: Border.all(
-                    color: colors.onSurface.withValues(alpha: 0.055),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.scrim.withValues(alpha: 0.14),
-                      blurRadius: navigationVisible ? 20 : 16,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              width: navigationVisible
+                  ? expandedNavigationWidth
+                  : _collapsedSize,
+              height: navigationVisible
+                  ? _navigationHeight
+                  : _collapsedSize,
+              decoration: BoxDecoration(
+                color: colors.surface.withValues(
+                  alpha: navigationVisible ? 0.84 : 0.90,
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 170),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: navigationVisible
-                        ? KeyedSubtree(
-                            key: const ValueKey('full-navigation'),
-                            child: _fullNavigation(context, theme, colors),
-                          )
-                        : KeyedSubtree(
-                            key: const ValueKey('collapsed-navigation'),
-                            child: _collapsedNavigation(colors),
-                          ),
+                borderRadius: BorderRadius.circular(
+                  navigationVisible ? 27 : _collapsedSize / 2,
+                ),
+                border: Border.all(
+                  color: colors.onSurface.withValues(alpha: 0.055),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.scrim.withValues(alpha: 0.14),
+                    blurRadius: navigationVisible ? 20 : 16,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 6),
                   ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 170),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: navigationVisible
+                      ? KeyedSubtree(
+                          key: const ValueKey('full-navigation'),
+                          child: _fullNavigation(context, theme, colors),
+                        )
+                      : KeyedSubtree(
+                          key: const ValueKey('collapsed-navigation'),
+                          child: _collapsedNavigation(colors),
+                        ),
                 ),
               ),
             ),
