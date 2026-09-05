@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:app_rtsg_client/application/trip_controller.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
@@ -8,8 +9,26 @@ import 'package:app_rtsg_client/presentation/pages/trip/components/route_input_s
 import 'package:app_rtsg_client/presentation/pages/trip/components/trip_panel.dart';
 import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
 
-class TripPage extends GetView<TripController> {
+class TripPage extends StatefulWidget {
   const TripPage({super.key});
+
+  @override
+  State<TripPage> createState() => _TripPageState();
+}
+
+class _TripPageState extends State<TripPage> {
+  TripController get controller => Get.find<TripController>();
+
+  // Solo controla la presentación. La lógica del viaje sigue en TripController.
+  double _routeSheetExtent = 0.42;
+
+  bool _onRouteSheetNotification(DraggableScrollableNotification notification) {
+    final next = notification.extent;
+    if ((next - _routeSheetExtent).abs() < 0.008) return false;
+
+    setState(() => _routeSheetExtent = next);
+    return false;
+  }
 
   Widget _roundBackButton() {
     return Material(
@@ -300,6 +319,20 @@ class TripPage extends GetView<TripController> {
                   ? route[route.length ~/ 2]
                   : (origin ?? controller.lastCenter);
 
+              // Hasta 62% del alto del panel el mapa sigue reajustándose.
+              // A partir de ahí mantenemos un límite para no alejar demasiado la ruta.
+              final fitSheetExtent = _routeSheetExtent.clamp(0.34, 0.62);
+              final fitPadding = EdgeInsets.fromLTRB(
+                34,
+                hasRoute ? 118 : 28,
+                34,
+                hasRoute ? (screenHeight * fitSheetExtent) + 20 : 28,
+              );
+
+              final fitPoints = hasRoute
+                  ? List<LatLng>.from(route)
+                  : const <LatLng>[];
+
               return MapPicker(
                 initialCenter: mapCenter,
                 initialZoom: hasRoute ? 14.8 : 16,
@@ -311,6 +344,11 @@ class TripPage extends GetView<TripController> {
                 showDestinationMarker: destination != null,
                 showCrosshair: isPickingOrigin,
                 showAttribution: false,
+                autoFit: hasRoute,
+                fitPoints: fitPoints,
+                fitPadding: fitPadding,
+                fitMinZoom: 11.5,
+                fitMaxZoom: 16.2,
                 polylineColor: AppColors.brandGreen,
                 onChanged: (center, zoom, {required isFinal}) {
                   if (!isPickingOrigin) return;
@@ -324,7 +362,6 @@ class TripPage extends GetView<TripController> {
             }),
           ),
 
-          // Overlay superior: siempre ocupa solo el alto de su contenido.
           Positioned(
             top: 0,
             left: 0,
@@ -375,9 +412,10 @@ class TripPage extends GetView<TripController> {
                 (controller.routePoints.length >= 2 ||
                     controller.isCalculating.value);
 
+            final extent = hasRoute ? _routeSheetExtent : 0.34;
             return Positioned(
               right: 10,
-              bottom: screenHeight * (hasRoute ? 0.50 : 0.36),
+              bottom: (screenHeight * extent) + 8,
               child: _attribution(),
             );
           }),
@@ -388,15 +426,15 @@ class TripPage extends GetView<TripController> {
                 (controller.routePoints.length >= 2 ||
                     controller.isCalculating.value);
 
-            return DraggableScrollableSheet(
+            final sheet = DraggableScrollableSheet(
               key: ValueKey(hasRoute),
-              initialChildSize: hasRoute ? 0.48 : 0.34,
-              minChildSize: hasRoute ? 0.38 : 0.28,
-              maxChildSize: hasRoute ? 0.84 : 0.54,
+              initialChildSize: hasRoute ? 0.42 : 0.32,
+              minChildSize: hasRoute ? 0.34 : 0.26,
+              maxChildSize: hasRoute ? 0.78 : 0.50,
               snap: true,
               snapSizes: hasRoute
-                  ? const [0.48, 0.84]
-                  : const [0.34, 0.54],
+                  ? const [0.42, 0.60, 0.78]
+                  : const [0.32, 0.50],
               builder: (context, scrollController) {
                 return TripPanel(
                   scrollController: scrollController,
@@ -404,6 +442,13 @@ class TripPage extends GetView<TripController> {
                   reservationLabel: reservationLabel,
                 );
               },
+            );
+
+            if (!hasRoute) return sheet;
+
+            return NotificationListener<DraggableScrollableNotification>(
+              onNotification: _onRouteSheetNotification,
+              child: sheet,
             );
           }),
         ],
