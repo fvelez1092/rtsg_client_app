@@ -130,12 +130,16 @@ class TripPage extends GetView<Home2Controller> {
               final origin = trip.originLatLng.value;
               final destination = trip.destinationLatLng.value;
               final route = trip.routePoints;
+              final hasRoute = route.length >= 2;
+              final mapCenter = hasRoute
+                  ? route[route.length ~/ 2]
+                  : (origin ?? controller.lastCenter);
 
               return MapPicker(
-                initialCenter: origin ?? controller.lastCenter,
-                initialZoom: route.length >= 2 ? 14.5 : 16,
+                initialCenter: mapCenter,
+                initialZoom: hasRoute ? 14.5 : 16,
                 path: route,
-                showPath: route.length >= 2,
+                showPath: hasRoute,
                 userPosition: origin,
                 showUserMarker: origin != null,
                 destinationPosition: destination,
