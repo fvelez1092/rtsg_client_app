@@ -46,6 +46,10 @@ class RouteInputSheet extends GetView<TripController> {
         : (controller.originLatLng.value ??
               const LatLng(-0.18065, -78.46783));
 
+    // El selector debe abrirse como una página completa, no encima del sheet.
+    onClose();
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+
     final result = await Get.to<MapPointResult>(
       () => TripLocationPickerPage(
         initialCenter: initial,
@@ -53,6 +57,7 @@ class RouteInputSheet extends GetView<TripController> {
             ? 'Ubica el punto de partida'
             : 'Ubica tu destino',
       ),
+      transition: Transition.cupertino,
     );
 
     if (result == null) return;
@@ -61,12 +66,10 @@ class RouteInputSheet extends GetView<TripController> {
       controller.destinationLatLng.value = result.point;
       controller.destinationAddress.value = result.name;
       await controller.recalculateIfPossible();
-      onClose();
       return;
     }
 
     home.setOriginFromExternal(point: result.point, address: result.name);
-    onClose();
   }
 
   @override
