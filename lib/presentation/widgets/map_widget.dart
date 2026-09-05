@@ -28,9 +28,11 @@ class MapPicker extends StatefulWidget {
   final bool showPath;
   final bool followDriver;
 
-  // User (optional)
+  // User / trip points (optional)
   final LatLng? userPosition;
   final bool showUserMarker;
+  final LatLng? destinationPosition;
+  final bool showDestinationMarker;
 
   // Styling
   final Color polylineColor;
@@ -54,9 +56,11 @@ class MapPicker extends StatefulWidget {
     this.showPath = false,
     this.followDriver = false,
 
-    // user defaults
+    // user / destination defaults
     this.userPosition,
     this.showUserMarker = false,
+    this.destinationPosition,
+    this.showDestinationMarker = false,
 
     // styling
     this.polylineColor = AppColors.brandGreen,
@@ -110,7 +114,6 @@ class _MapPickerState extends State<MapPicker> {
   void didUpdateWidget(covariant MapPicker oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Follow driver (only when enabled & user isn't moving the map)
     if (widget.followDriver &&
         !_userInteracting &&
         widget.driverPosition != null &&
@@ -120,7 +123,6 @@ class _MapPickerState extends State<MapPicker> {
       return;
     }
 
-    // Picker behavior (manual center updates)
     if (widget.initialCenter != oldWidget.initialCenter) {
       final currentZoom = _mapController.camera.zoom;
       _mapController.move(widget.initialCenter, currentZoom);
@@ -158,10 +160,35 @@ class _MapPickerState extends State<MapPicker> {
     );
   }
 
+  Widget _destinationMarker() {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.brandRed, width: 3),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.flag_rounded,
+        color: AppColors.brandRed,
+        size: 21,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final driver = widget.driverPosition;
     final user = widget.userPosition;
+    final destination = widget.destinationPosition;
 
     return Stack(
       alignment: Alignment.center,
@@ -202,6 +229,18 @@ class _MapPickerState extends State<MapPicker> {
               MarkerLayer(
                 markers: [
                   Marker(point: user, width: 44, height: 44, child: _userDot()),
+                ],
+              ),
+
+            if (widget.showDestinationMarker && destination != null)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: destination,
+                    width: 44,
+                    height: 44,
+                    child: _destinationMarker(),
+                  ),
                 ],
               ),
 
