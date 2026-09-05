@@ -11,9 +11,15 @@ class AuthService {
     try {
       final res = await _dio.post(
         '/acceder',
-        data: {"user": req.userName, "password": req.password},
+        data: {'user': req.userName, 'password': req.password},
       );
-      return LoginResponse.fromJson(res.data as Map<String, dynamic>);
+
+      final data = res.data;
+      if (data is Map) {
+        return LoginResponse.fromJson(Map<String, dynamic>.from(data));
+      }
+
+      throw Exception('Respuesta de inicio de sesión inválida.');
     } on DioException catch (e) {
       throw Exception(_extractMessage(e));
     }
@@ -24,12 +30,12 @@ class AuthService {
     try {
       final res = await _dio.get(
         '/usuarios/mostrar.clientes',
-        queryParameters: {"codigocliente": code},
+        queryParameters: {'codigocliente': code},
       );
       if (res.data is Map<String, dynamic>) {
         return res.data as Map<String, dynamic>;
       }
-      throw Exception("Cliente no encontrado");
+      throw Exception('Cliente no encontrado');
     } on DioException catch (e) {
       throw Exception(_extractMessage(e));
     }
@@ -38,7 +44,7 @@ class AuthService {
   /// ✅ Generar clave (endpoint nuevo)
   Future<void> generatePassword({required String email}) async {
     try {
-      await _dio.post('/api/v1/generar', data: {"correo": email});
+      await _dio.post('/api/v1/generar', data: {'correo': email});
     } on DioException catch (e) {
       throw Exception(_extractMessage(e));
     }
@@ -67,9 +73,13 @@ class AuthService {
   String _extractMessage(DioException e) {
     final data = e.response?.data;
     if (data is Map<String, dynamic>) {
-      final msg = (data['error'] ?? data['message'] ?? '').toString();
-      if (msg.trim().isNotEmpty) return msg;
+      final msg = (
+        data['observacion'] ?? data['error'] ?? data['message'] ?? ''
+      ).toString();
+      if (msg.trim().isNotEmpty && msg.trim().toLowerCase() != 'null') {
+        return msg.trim();
+      }
     }
-    return e.message ?? 'Auth error';
+    return e.message ?? 'No fue posible conectar con el servidor.';
   }
 }
