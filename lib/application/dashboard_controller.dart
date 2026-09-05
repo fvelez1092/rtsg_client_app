@@ -1,8 +1,11 @@
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 class DashboardController extends GetxController {
   final RxInt selectedIndex = 0.obs;
+  final RxBool isNavigationVisible = true.obs;
 
   @override
   void onInit() {
@@ -21,6 +24,47 @@ class DashboardController extends GetxController {
   void changePage(int index) {
     if (index < 0 || index > 3 || selectedIndex.value == index) return;
     selectedIndex.value = index;
+    showNavigation();
+  }
+
+  bool handleScrollNotification(ScrollNotification notification) {
+    // Solo reaccionamos al scroll vertical de las páginas. Los carruseles
+    // horizontales del Home no deben modificar la navegación principal.
+    if (notification.metrics.axis != Axis.vertical) return false;
+
+    if (notification.metrics.pixels <= 4) {
+      showNavigation();
+      return false;
+    }
+
+    if (notification is UserScrollNotification) {
+      switch (notification.direction) {
+        case ScrollDirection.reverse:
+          if (notification.metrics.extentBefore > 20) {
+            hideNavigation();
+          }
+          break;
+        case ScrollDirection.forward:
+          showNavigation();
+          break;
+        case ScrollDirection.idle:
+          break;
+      }
+    }
+
+    return false;
+  }
+
+  void showNavigation() {
+    if (!isNavigationVisible.value) {
+      isNavigationVisible.value = true;
+    }
+  }
+
+  void hideNavigation() {
+    if (isNavigationVisible.value) {
+      isNavigationVisible.value = false;
+    }
   }
 
   int _indexFromRoute(String route) {
