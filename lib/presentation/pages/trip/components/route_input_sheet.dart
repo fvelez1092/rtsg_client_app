@@ -1,12 +1,13 @@
 import 'package:app_rtsg_client/application/home2_controller.dart';
 import 'package:app_rtsg_client/application/trip_controller.dart';
+import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/data/models/map_point_result_model.dart';
-import 'package:app_rtsg_client/presentation/pages/map/map_select_page.dart';
+import 'package:app_rtsg_client/data/models/saved_address_model.dart';
+import 'package:app_rtsg_client/data/services/saved_address_service.dart';
+import 'package:app_rtsg_client/presentation/pages/trip/components/trip_location_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
-
-import 'package:app_rtsg_client/core/theme/app_colors.dart';
 
 enum RouteSelectMode { origin, destination }
 
@@ -16,21 +17,78 @@ class RouteInputSheet extends GetView<TripController> {
 
   const RouteInputSheet({super.key, required this.onClose, required this.mode});
 
+  Future<void> _useSavedAddress(
+    SavedAddress address,
+    Home2Controller home,
+  ) async {
+    if (mode == RouteSelectMode.origin) {
+      home.setOriginFromExternal(point: address.point, address: address.address);
+      onClose();
+      return;
+    }
+
+    controller.destinationLatLng.value = address.point;
+    controller.destinationAddress.value = address.address;
+    await controller.recalculateIfPossible();
+    onClose();
+  }
+
+  Future<void> _selectOnMap(
+    BuildContext context,
+    Home2Controller home,
+  ) async {
+    FocusScope.of(context).unfocus();
+
+    final LatLng initial = mode == RouteSelectMode.destination
+        ? (controller.destinationLatLng.value ??
+              controller.originLatLng.value ??
+              const LatLng(-0.18065, -78.46783))
+        : (controller.originLatLng.value ??
+              const LatLng(-0.18065, -78.46783));
+
+    final result = await Get.to<MapPointResult>(
+      () => TripLocationPickerPage(
+        initialCenter: initial,
+        title: mode == RouteSelectMode.origin
+            ? 'Ubica el punto de partida'
+            : 'Ubica tu destino',
+      ),
+    );
+
+    if (result == null) return;
+
+    if (mode == RouteSelectMode.destination) {
+      controller.destinationLatLng.value = result.point;
+      controller.destinationAddress.value = result.name;
+      await controller.recalculateIfPossible();
+      onClose();
+      return;
+    }
+
+    home.setOriginFromExternal(point: result.point, address: result.name);
+    onClose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final home = Get.find<Home2Controller>();
+    final savedAddresses = SavedAddressService().getAll();
+    final isOrigin = mode == RouteSelectMode.origin;
 
     return SafeArea(
       top: false,
       child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+        ),
         decoration: const BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(22),
-            topRight: Radius.circular(22),
+            topLeft: Radius.circular(26),
+            topRight: Radius.circular(26),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -42,68 +100,68 @@ class RouteInputSheet extends GetView<TripController> {
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
-            const SizedBox(height: 10),
-
+            const SizedBox(height: 14),
             Row(
               children: [
-                const SizedBox(width: 40),
                 Expanded(
-                  child: Text(
-                    mode == RouteSelectMode.origin
-                        ? 'Selecciona tu origen'
-                        : 'Introduce tu ruta',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isOrigin ? 'Punto de partida' : '¿A dónde vas?',
+                        style: const TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        isOrigin
+                            ? 'Busca una dirección o selecciónala en el mapa.'
+                            : 'Busca tu destino o usa uno de tus lugares guardados.',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 _CloseButton(onTap: onClose),
               ],
             ),
-            const SizedBox(height: 18),
-
-            // Origen actual del mapa (siempre visible)
-            Obx(
-              () => _CurrentPlaceTile(
-                text: controller.originAddress.value.isEmpty
-                    ? 'Mi ubicación'
-                    : controller.originAddress.value,
-              ),
-            ),
-            const SizedBox(height: 12),
-
+            const SizedBox(height: 16),
             TextField(
               controller: controller.searchCtrl,
+              autofocus: !isOrigin,
               onChanged: controller.onQueryChanged,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: AppColors.surface,
-                hintText: mode == RouteSelectMode.origin ? 'Origen' : 'Destino',
+                fillColor: AppColors.inputFill,
+                hintText: isOrigin
+                    ? 'Busca el punto de partida'
+                    : 'Busca un destino',
                 hintStyle: const TextStyle(color: AppColors.textSecondary),
                 prefixIcon: const Icon(
-                  Icons.search,
+                  Icons.search_rounded,
                   color: AppColors.textPrimary,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: AppColors.textPrimary,
-                    width: 1.5,
+                suffixIcon: IconButton(
+                  tooltip: 'Seleccionar en el mapa',
+                  onPressed: () => _selectOnMap(context, home),
+                  icon: const Icon(
+                    Icons.map_outlined,
+                    color: AppColors.brandGreen,
                   ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: AppColors.textPrimary,
-                    width: 1.5,
-                  ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 14,
+                  vertical: 15,
                 ),
               ),
               style: const TextStyle(
@@ -111,40 +169,44 @@ class RouteInputSheet extends GetView<TripController> {
                 fontSize: 16,
               ),
             ),
-
             const SizedBox(height: 10),
-
             Obx(() {
-              final loading = controller.isSearching.value;
-              return AnimatedOpacity(
-                duration: const Duration(milliseconds: 150),
-                opacity: loading ? 1 : 0,
-                child: loading
-                    ? const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text(
-                            'Buscando cerca de ti…',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+              if (!controller.isSearching.value) {
+                return const SizedBox.shrink();
+              }
+
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.brandGreen,
+                      ),
+                    ),
+                    SizedBox(width: 9),
+                    Text(
+                      'Buscando lugares cerca de ti…',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               );
             }),
-
             Obx(() {
               final list = controller.results;
-              if (list.isEmpty) return const SizedBox(height: 6);
+              if (list.isEmpty) return const SizedBox.shrink();
 
-              return ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 260),
+              return Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
+                  padding: const EdgeInsets.only(top: 6),
                   itemCount: list.length,
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, color: AppColors.borderSoft),
@@ -156,11 +218,18 @@ class RouteInputSheet extends GetView<TripController> {
                     final lon = (item['lon'] as num?)?.toDouble();
 
                     return ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-                      leading: const Icon(
-                        Icons.location_on_outlined,
-                        color: AppColors.textSecondary,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.inputFill,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
+                          Icons.location_on_outlined,
+                          color: AppColors.brandGreen,
+                        ),
                       ),
                       title: Text(
                         name,
@@ -168,12 +237,11 @@ class RouteInputSheet extends GetView<TripController> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       onTap: () async {
                         if (lat == null || lon == null) return;
-
                         final point = LatLng(lat, lon);
 
                         if (mode == RouteSelectMode.destination) {
@@ -182,8 +250,10 @@ class RouteInputSheet extends GetView<TripController> {
                           return;
                         }
 
-                        // ORIGEN: actualiza mapa principal + trip origin
-                        home.setOriginFromExternal(point: point, address: name);
+                        home.setOriginFromExternal(
+                          point: point,
+                          address: name,
+                        );
                         onClose();
                       },
                     );
@@ -191,42 +261,62 @@ class RouteInputSheet extends GetView<TripController> {
                 ),
               );
             }),
+            Obx(() {
+              if (controller.results.isNotEmpty ||
+                  controller.searchCtrl.text.trim().isNotEmpty) {
+                return const SizedBox.shrink();
+              }
 
-            const SizedBox(height: 10),
-
-            _SelectOnMap(
-              onTap: () async {
-                FocusScope.of(context).unfocus();
-
-                final LatLng initial = (mode == RouteSelectMode.destination)
-                    ? (controller.destinationLatLng.value ??
-                          controller.originLatLng.value ??
-                          const LatLng(-0.18065, -78.46783))
-                    : (controller.originLatLng.value ??
-                          const LatLng(-0.18065, -78.46783));
-
-                final result = await Get.to<MapPointResult>(
-                  () => MapSelectPage(initialCenter: initial),
-                );
-
-                if (result == null) return;
-
-                if (mode == RouteSelectMode.destination) {
-                  controller.destinationLatLng.value = result.point;
-                  controller.destinationAddress.value = result.name;
-                  await controller.recalculateIfPossible();
-                  onClose();
-                  return;
-                }
-
-                // ORIGEN desde mapa select
-                home.setOriginFromExternal(
-                  point: result.point,
-                  address: result.name,
-                );
-                onClose();
-              },
-            ),
+              return Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  children: [
+                    if (isOrigin)
+                      Obx(
+                        () => _ActionTile(
+                          icon: Icons.my_location_rounded,
+                          title: 'Mi ubicación actual',
+                          subtitle: controller.originAddress.value.isEmpty
+                              ? 'Usar ubicación del GPS'
+                              : controller.originAddress.value,
+                          onTap: onClose,
+                        ),
+                      ),
+                    _ActionTile(
+                      icon: Icons.map_outlined,
+                      title: 'Seleccionar en el mapa',
+                      subtitle: 'Mueve el mapa para precisar la dirección',
+                      onTap: () => _selectOnMap(context, home),
+                    ),
+                    if (savedAddresses.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.only(top: 14, bottom: 7),
+                        child: Text(
+                          'Tus lugares',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      ...savedAddresses.map(
+                        (address) => _ActionTile(
+                          icon: address.label.toLowerCase().contains('casa')
+                              ? Icons.home_rounded
+                              : address.label.toLowerCase().contains('trabajo')
+                                  ? Icons.work_rounded
+                                  : Icons.bookmark_rounded,
+                          title: address.label,
+                          subtitle: address.address,
+                          onTap: () => _useSavedAddress(address, home),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),
@@ -255,78 +345,52 @@ class _CloseButton extends StatelessWidget {
   }
 }
 
-class _CurrentPlaceTile extends StatelessWidget {
-  final String text;
-  const _CurrentPlaceTile({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.brandGreen, width: 3),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectOnMap extends StatelessWidget {
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
-  const _SelectOnMap({required this.onTap});
+
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              Icon(
-                Icons.person_pin_circle_outlined,
-                color: Colors.blue,
-                size: 22,
-              ),
-              SizedBox(width: 10),
-              Text(
-                'Seleccionar en el mapa',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue,
-                ),
-              ),
-            ],
-          ),
+    return ListTile(
+      onTap: onTap,
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 43,
+        height: 43,
+        decoration: BoxDecoration(
+          color: AppColors.brandGreen.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(13),
         ),
+        child: Icon(icon, color: AppColors.brandGreen),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 12,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.chevron_right_rounded,
+        color: AppColors.textSecondary,
       ),
     );
   }
