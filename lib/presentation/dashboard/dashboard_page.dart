@@ -23,31 +23,29 @@ class DashboardPage extends GetView<DashboardController> {
     final colors = theme.colorScheme;
     final bottomSafeArea = MediaQuery.viewPaddingOf(context).bottom;
 
-    // Aunque la barra siga siendo flotante, el contenido útil termina antes de
-    // ella. Esto evita que botones, cards o el final de un scroll queden ocultos.
     final contentBottomInset =
         _navigationHeight + _navigationBottomGap + bottomSafeArea + _contentGap;
 
-    return Obx(
-      () => Scaffold(
+    return Obx(() {
+      final navigationVisible = controller.isNavigationVisible.value;
+
+      return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         extendBody: true,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            Padding(
-              padding: EdgeInsets.only(bottom: contentBottomInset),
-              child: IndexedStack(
-                index: controller.selectedIndex.value,
-                children: const [
-                  HomePage(),
-                  ActivityPage(),
-                  WalletPage(),
-                  AccountPage(),
-                ],
-              ),
+        body: NotificationListener<ScrollNotification>(
+          onNotification: controller.handleScrollNotification,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: contentBottomInset),
+            child: IndexedStack(
+              index: controller.selectedIndex.value,
+              children: const [
+                HomePage(),
+                ActivityPage(),
+                WalletPage(),
+                AccountPage(),
+              ],
             ),
-          ],
+          ),
         ),
         bottomNavigationBar: SafeArea(
           top: false,
@@ -57,86 +55,111 @@ class DashboardPage extends GetView<DashboardController> {
             _navigationHorizontalMargin,
             _navigationBottomGap,
           ),
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _navigationMaxWidth),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(27),
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: colors.surface.withValues(alpha: 0.84),
-                      borderRadius: BorderRadius.circular(27),
-                      border: Border.all(
-                        color: colors.onSurface.withValues(alpha: 0.055),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.scrim.withValues(alpha: 0.14),
-                          blurRadius: 20,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+          child: IgnorePointer(
+            ignoring: !navigationVisible,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              offset: navigationVisible ? Offset.zero : const Offset(0, 1.35),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOut,
+                opacity: navigationVisible ? 1 : 0,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  heightFactor: 1,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: _navigationMaxWidth,
                     ),
-                    child: NavigationBarTheme(
-                      data: NavigationBarThemeData(
-                        height: _navigationHeight,
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        indicatorColor: colors.primary.withValues(alpha: 0.12),
-                        indicatorShape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(27),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colors.surface.withValues(alpha: 0.84),
+                            borderRadius: BorderRadius.circular(27),
+                            border: Border.all(
+                              color: colors.onSurface.withValues(alpha: 0.055),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.scrim.withValues(alpha: 0.14),
+                                blurRadius: 20,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: NavigationBarTheme(
+                            data: NavigationBarThemeData(
+                              height: _navigationHeight,
+                              backgroundColor: Colors.transparent,
+                              elevation: 0,
+                              indicatorColor:
+                                  colors.primary.withValues(alpha: 0.12),
+                              indicatorShape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              labelTextStyle:
+                                  WidgetStateProperty.resolveWith((states) {
+                                final selected =
+                                    states.contains(WidgetState.selected);
+                                return theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 11,
+                                  color: selected
+                                      ? colors.primary
+                                      : colors.onSurface.withValues(alpha: 0.58),
+                                  fontWeight: selected
+                                      ? FontWeight.w800
+                                      : FontWeight.w500,
+                                );
+                              }),
+                              iconTheme:
+                                  WidgetStateProperty.resolveWith((states) {
+                                final selected =
+                                    states.contains(WidgetState.selected);
+                                return IconThemeData(
+                                  size: selected ? 24 : 22,
+                                  color: selected
+                                      ? colors.primary
+                                      : colors.onSurface.withValues(alpha: 0.58),
+                                );
+                              }),
+                            ),
+                            child: NavigationBar(
+                              selectedIndex: controller.selectedIndex.value,
+                              onDestinationSelected: controller.changePage,
+                              destinations: const [
+                                NavigationDestination(
+                                  icon: Icon(Icons.home_outlined),
+                                  selectedIcon: Icon(Icons.home_rounded),
+                                  label: 'Inicio',
+                                ),
+                                NavigationDestination(
+                                  icon: Icon(Icons.receipt_long_outlined),
+                                  selectedIcon: Icon(Icons.receipt_long_rounded),
+                                  label: 'Actividad',
+                                ),
+                                NavigationDestination(
+                                  icon: Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                  ),
+                                  selectedIcon: Icon(
+                                    Icons.account_balance_wallet_rounded,
+                                  ),
+                                  label: 'Billetera',
+                                ),
+                                NavigationDestination(
+                                  icon: Icon(Icons.person_outline_rounded),
+                                  selectedIcon: Icon(Icons.person_rounded),
+                                  label: 'Cuenta',
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                          final selected = states.contains(WidgetState.selected);
-                          return theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 11,
-                            color: selected
-                                ? colors.primary
-                                : colors.onSurface.withValues(alpha: 0.58),
-                            fontWeight:
-                                selected ? FontWeight.w800 : FontWeight.w500,
-                          );
-                        }),
-                        iconTheme: WidgetStateProperty.resolveWith((states) {
-                          final selected = states.contains(WidgetState.selected);
-                          return IconThemeData(
-                            size: selected ? 24 : 22,
-                            color: selected
-                                ? colors.primary
-                                : colors.onSurface.withValues(alpha: 0.58),
-                          );
-                        }),
-                      ),
-                      child: NavigationBar(
-                        selectedIndex: controller.selectedIndex.value,
-                        onDestinationSelected: controller.changePage,
-                        destinations: const [
-                          NavigationDestination(
-                            icon: Icon(Icons.home_outlined),
-                            selectedIcon: Icon(Icons.home_rounded),
-                            label: 'Inicio',
-                          ),
-                          NavigationDestination(
-                            icon: Icon(Icons.receipt_long_outlined),
-                            selectedIcon: Icon(Icons.receipt_long_rounded),
-                            label: 'Actividad',
-                          ),
-                          NavigationDestination(
-                            icon: Icon(Icons.account_balance_wallet_outlined),
-                            selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-                            label: 'Billetera',
-                          ),
-                          NavigationDestination(
-                            icon: Icon(Icons.person_outline_rounded),
-                            selectedIcon: Icon(Icons.person_rounded),
-                            label: 'Cuenta',
-                          ),
-                        ],
                       ),
                     ),
                   ),
@@ -145,7 +168,7 @@ class DashboardPage extends GetView<DashboardController> {
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
