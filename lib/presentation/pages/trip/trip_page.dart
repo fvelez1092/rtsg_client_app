@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'package:app_rtsg_client/application/home2_controller.dart';
 import 'package:app_rtsg_client/application/trip_controller.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/data/models/trip_status.dart';
 import 'package:app_rtsg_client/presentation/pages/trip/components/trip_panel.dart';
 import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
 
-class TripPage extends GetView<Home2Controller> {
+class TripPage extends GetView<TripController> {
   const TripPage({super.key});
 
   Widget _roundBackButton() {
@@ -111,11 +110,11 @@ class TripPage extends GetView<Home2Controller> {
     );
   }
 
-  Widget _originPickerCard(TripController trip) {
+  Widget _originPickerCard() {
     return Obx(() {
       final isPickingOrigin =
-          trip.destinationLatLng.value == null &&
-          trip.status.value == TripStatus.idle;
+          controller.destinationLatLng.value == null &&
+          controller.status.value == TripStatus.idle;
 
       if (!isPickingOrigin) return const SizedBox.shrink();
 
@@ -203,7 +202,6 @@ class TripPage extends GetView<Home2Controller> {
 
   @override
   Widget build(BuildContext context) {
-    final trip = Get.find<TripController>();
     final args = Get.arguments;
     final isReservation = args is Map && args['isReservation'] == true;
     final reservationLabel = isReservation
@@ -218,12 +216,12 @@ class TripPage extends GetView<Home2Controller> {
         children: [
           Positioned.fill(
             child: Obx(() {
-              final origin = trip.originLatLng.value;
-              final destination = trip.destinationLatLng.value;
-              final route = trip.routePoints;
+              final origin = controller.originLatLng.value;
+              final destination = controller.destinationLatLng.value;
+              final route = controller.routePoints;
               final hasRoute = route.length >= 2;
               final isPickingOrigin =
-                  destination == null && trip.status.value == TripStatus.idle;
+                  destination == null && controller.status.value == TripStatus.idle;
 
               final mapCenter = hasRoute
                   ? route[route.length ~/ 2]
@@ -270,7 +268,7 @@ class TripPage extends GetView<Home2Controller> {
             top: 88,
             left: 0,
             right: 0,
-            child: Center(child: _originPickerCard(trip)),
+            child: Center(child: _originPickerCard()),
           ),
           Positioned(
             right: 10,
