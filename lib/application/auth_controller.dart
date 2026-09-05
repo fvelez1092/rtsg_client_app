@@ -60,7 +60,7 @@ class AuthController extends GetxController {
       await _memory.setToken(token);
       await _memory.setUser(user);
 
-      Get.offAllNamed(AppRoutes.HOME);
+      Get.offAllNamed(AppRoutes.DASHBOARD);
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
