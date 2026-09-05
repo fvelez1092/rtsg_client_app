@@ -11,25 +11,13 @@ class MainBottomNavigation extends StatelessWidget {
 
   final int currentIndex;
 
-  void _navigate(int index) {
-    if (index == currentIndex) return;
-
-    final route = switch (index) {
-      0 => AppRoutes.HOME,
-      1 => AppRoutes.ACTIVITY,
-      2 => AppRoutes.WALLET,
-      3 => AppRoutes.ACCOUNT,
-      _ => AppRoutes.HOME,
-    };
-
-    Get.offNamed(route);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
+    // Diseño original del Home: mismo NavigationBarTheme, indicador,
+    // tipografía e iconografía. Solo se mantiene activa la navegación.
     return NavigationBarTheme(
       data: NavigationBarThemeData(
         backgroundColor: colors.surface,
@@ -56,7 +44,24 @@ class MainBottomNavigation extends StatelessWidget {
       ),
       child: NavigationBar(
         selectedIndex: currentIndex,
-        onDestinationSelected: _navigate,
+        onDestinationSelected: (index) {
+          if (index == currentIndex) return;
+
+          switch (index) {
+            case 0:
+              Get.offNamed(AppRoutes.HOME);
+              break;
+            case 1:
+              Get.offNamed(AppRoutes.ACTIVITY);
+              break;
+            case 2:
+              Get.offNamed(AppRoutes.WALLET);
+              break;
+            case 3:
+              Get.offNamed(AppRoutes.ACCOUNT);
+              break;
+          }
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
