@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:app_rtsg_client/application/dashboard_controller.dart';
 import 'package:app_rtsg_client/presentation/pages/account/account_page.dart';
 import 'package:app_rtsg_client/presentation/pages/activity/activity_page.dart';
@@ -9,102 +11,126 @@ import 'package:get/get.dart';
 class DashboardPage extends GetView<DashboardController> {
   const DashboardPage({super.key});
 
+  static const double _navigationHeight = 70;
+  static const double _navigationBottomGap = 10;
+  static const double _contentGap = 12;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final bottomSafeArea = MediaQuery.viewPaddingOf(context).bottom;
+
+    // Aunque la barra siga siendo flotante, el contenido útil termina antes de
+    // ella. Esto evita que botones, cards o el final de un scroll queden ocultos.
+    final contentBottomInset =
+        _navigationHeight + _navigationBottomGap + bottomSafeArea + _contentGap;
 
     return Obx(
       () => Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-
-        // El contenido continúa detrás de la barra flotante.
         extendBody: true,
-
-        // IndexedStack mantiene vivo el estado de cada tab al cambiar de vista.
-        body: IndexedStack(
-          index: controller.selectedIndex.value,
-          children: const [
-            HomePage(),
-            ActivityPage(),
-            WalletPage(),
-            AccountPage(),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(bottom: contentBottomInset),
+              child: IndexedStack(
+                index: controller.selectedIndex.value,
+                children: const [
+                  HomePage(),
+                  ActivityPage(),
+                  WalletPage(),
+                  AccountPage(),
+                ],
+              ),
+            ),
           ],
         ),
-
-        // Navegación flotante original del Dashboard.
         bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: colors.onSurface.withOpacity(0.06)),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.scrim.withOpacity(0.18),
-                  blurRadius: 24,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 8),
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(
+            14,
+            0,
+            14,
+            _navigationBottomGap,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.surface.withValues(alpha: 0.84),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: colors.onSurface.withValues(alpha: 0.055),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.scrim.withValues(alpha: 0.14),
+                      blurRadius: 22,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: NavigationBarTheme(
-              data: NavigationBarThemeData(
-                height: 72,
-                backgroundColor: colors.surface,
-                elevation: 0,
-                indicatorColor: colors.primary.withOpacity(0.15),
-                indicatorShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                child: NavigationBarTheme(
+                  data: NavigationBarThemeData(
+                    height: _navigationHeight,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    indicatorColor: colors.primary.withValues(alpha: 0.12),
+                    indicatorShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                      final selected = states.contains(WidgetState.selected);
+                      return theme.textTheme.labelSmall?.copyWith(
+                        color: selected
+                            ? colors.primary
+                            : colors.onSurface.withValues(alpha: 0.58),
+                        fontWeight:
+                            selected ? FontWeight.w800 : FontWeight.w500,
+                      );
+                    }),
+                    iconTheme: WidgetStateProperty.resolveWith((states) {
+                      final selected = states.contains(WidgetState.selected);
+                      return IconThemeData(
+                        size: selected ? 26 : 24,
+                        color: selected
+                            ? colors.primary
+                            : colors.onSurface.withValues(alpha: 0.58),
+                      );
+                    }),
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: controller.selectedIndex.value,
+                    onDestinationSelected: controller.changePage,
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.home_outlined),
+                        selectedIcon: Icon(Icons.home_rounded),
+                        label: 'Inicio',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.receipt_long_outlined),
+                        selectedIcon: Icon(Icons.receipt_long_rounded),
+                        label: 'Actividad',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.account_balance_wallet_outlined),
+                        selectedIcon: Icon(Icons.account_balance_wallet_rounded),
+                        label: 'Billetera',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.person_outline_rounded),
+                        selectedIcon: Icon(Icons.person_rounded),
+                        label: 'Cuenta',
+                      ),
+                    ],
+                  ),
                 ),
-                labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                  final isSelected = states.contains(WidgetState.selected);
-
-                  return theme.textTheme.labelSmall?.copyWith(
-                    color: isSelected
-                        ? colors.primary
-                        : colors.onSurface.withOpacity(0.55),
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  );
-                }),
-                iconTheme: WidgetStateProperty.resolveWith((states) {
-                  final isSelected = states.contains(WidgetState.selected);
-
-                  return IconThemeData(
-                    size: isSelected ? 26 : 24,
-                    color: isSelected
-                        ? colors.primary
-                        : colors.onSurface.withOpacity(0.55),
-                  );
-                }),
-              ),
-              child: NavigationBar(
-                selectedIndex: controller.selectedIndex.value,
-                onDestinationSelected: controller.changePage,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
-                    label: 'Inicio',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    selectedIcon: Icon(Icons.receipt_long_rounded),
-                    label: 'Actividad',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.account_balance_wallet_outlined),
-                    selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-                    label: 'Billetera',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline_rounded),
-                    selectedIcon: Icon(Icons.person_rounded),
-                    label: 'Cuenta',
-                  ),
-                ],
               ),
             ),
           ),
