@@ -21,7 +21,7 @@ class _TripPageState extends State<TripPage> {
 
   // Estado visual del panel de confirmación. La lógica del viaje vive en
   // TripController.
-  double _routeSheetExtent = 0.60;
+  double _routeSheetExtent = 0.55;
 
   bool _onRouteSheetNotification(DraggableScrollableNotification notification) {
     final next = notification.extent;
@@ -29,6 +29,17 @@ class _TripPageState extends State<TripPage> {
 
     setState(() => _routeSheetExtent = next);
     return false;
+  }
+
+  double _fitMaxZoomForDistance(double distanceKm) {
+    if (distanceKm <= 0.8) return 15.4;
+    if (distanceKm <= 1.5) return 15.0;
+    if (distanceKm <= 3.0) return 14.7;
+    if (distanceKm <= 5.0) return 14.4;
+    if (distanceKm <= 10.0) return 14.0;
+    if (distanceKm <= 20.0) return 13.5;
+    if (distanceKm <= 40.0) return 13.0;
+    return 12.5;
   }
 
   Widget _roundBackButton() {
@@ -321,13 +332,15 @@ class _TripPageState extends State<TripPage> {
                   ? route[route.length ~/ 2]
                   : (origin ?? controller.lastCenter);
 
-              // El panel tapa parte del mapa, pero no usamos todo ese porcentaje
-              // como padding porque haría la ruta demasiado pequeña. El padding
-              // crece progresivamente al expandir el panel y se limita al 48%.
-              final actualExtent = _routeSheetExtent.clamp(0.42, 0.80);
+              // El bounds de la ruta ya toma en cuenta la separación real entre
+              // origen y destino. Además limitamos cuánto puede acercarse la
+              // cámara según los kilómetros del viaje.
+              final actualExtent = _routeSheetExtent.clamp(0.40, 0.70);
               final progress =
-                  ((actualExtent - 0.42) / (0.80 - 0.42)).clamp(0.0, 1.0);
-              final cameraBottomExtent = 0.34 + (progress * 0.14);
+                  ((actualExtent - 0.40) / (0.70 - 0.40)).clamp(0.0, 1.0);
+              final cameraBottomExtent = 0.31 + (progress * 0.10);
+              final distanceKm = controller.distanceKm.value;
+              final distanceMaxZoom = _fitMaxZoomForDistance(distanceKm);
 
               final fitPadding = EdgeInsets.fromLTRB(
                 30,
@@ -342,7 +355,7 @@ class _TripPageState extends State<TripPage> {
 
               return MapPicker(
                 initialCenter: mapCenter,
-                initialZoom: hasRoute ? 15.0 : 16,
+                initialZoom: hasRoute ? distanceMaxZoom : 16,
                 path: route,
                 showPath: hasRoute,
                 userPosition: origin,
@@ -354,8 +367,8 @@ class _TripPageState extends State<TripPage> {
                 autoFit: hasRoute,
                 fitPoints: fitPoints,
                 fitPadding: fitPadding,
-                fitMinZoom: 12.8,
-                fitMaxZoom: 16.3,
+                fitMinZoom: 10.5,
+                fitMaxZoom: distanceMaxZoom,
                 polylineColor: AppColors.brandGreen,
                 onChanged: (center, zoom, {required isFinal}) {
                   if (!isPickingOrigin) return;
@@ -431,12 +444,12 @@ class _TripPageState extends State<TripPage> {
 
             final sheet = DraggableScrollableSheet(
               key: ValueKey(hasRoute),
-              initialChildSize: hasRoute ? 0.60 : 0.32,
-              minChildSize: hasRoute ? 0.42 : 0.26,
-              maxChildSize: hasRoute ? 0.80 : 0.50,
+              initialChildSize: hasRoute ? 0.55 : 0.32,
+              minChildSize: hasRoute ? 0.40 : 0.26,
+              maxChildSize: hasRoute ? 0.70 : 0.50,
               snap: true,
               snapSizes: hasRoute
-                  ? const [0.42, 0.60, 0.80]
+                  ? const [0.40, 0.55, 0.70]
                   : const [0.32, 0.50],
               builder: (context, scrollController) {
                 return TripPanel(
