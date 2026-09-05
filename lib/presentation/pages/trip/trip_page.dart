@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:app_rtsg_client/application/home2_controller.dart';
 import 'package:app_rtsg_client/application/trip_controller.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
+import 'package:app_rtsg_client/data/models/trip_status.dart';
 import 'package:app_rtsg_client/presentation/pages/trip/components/trip_panel.dart';
 import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
 
@@ -110,6 +111,96 @@ class TripPage extends GetView<Home2Controller> {
     );
   }
 
+  Widget _originPickerCard(TripController trip) {
+    return Obx(() {
+      final isPickingOrigin =
+          trip.destinationLatLng.value == null &&
+          trip.status.value == TripStatus.idle;
+
+      if (!isPickingOrigin) return const SizedBox.shrink();
+
+      final resolving = controller.isResolvingOrigin.value;
+      final address = controller.centerLabel.value;
+
+      return Container(
+        constraints: const BoxConstraints(maxWidth: 310),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 14,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.brandGreen.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: resolving
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.brandGreen,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.my_location_rounded,
+                      size: 20,
+                      color: AppColors.brandGreen,
+                    ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Punto de partida',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    address,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  const Text(
+                    'Mueve el mapa para ajustar la ubicación',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final trip = Get.find<TripController>();
@@ -131,6 +222,9 @@ class TripPage extends GetView<Home2Controller> {
               final destination = trip.destinationLatLng.value;
               final route = trip.routePoints;
               final hasRoute = route.length >= 2;
+              final isPickingOrigin =
+                  destination == null && trip.status.value == TripStatus.idle;
+
               final mapCenter = hasRoute
                   ? route[route.length ~/ 2]
                   : (origin ?? controller.lastCenter);
@@ -141,13 +235,20 @@ class TripPage extends GetView<Home2Controller> {
                 path: route,
                 showPath: hasRoute,
                 userPosition: origin,
-                showUserMarker: origin != null,
+                showUserMarker: origin != null && !isPickingOrigin,
                 destinationPosition: destination,
                 showDestinationMarker: destination != null,
-                showCrosshair: false,
+                showCrosshair: isPickingOrigin,
                 showAttribution: false,
                 polylineColor: AppColors.brandGreen,
-                onChanged: (_, __, {required isFinal}) {},
+                onChanged: (center, zoom, {required isFinal}) {
+                  if (!isPickingOrigin) return;
+                  controller.onMapChanged(
+                    center,
+                    zoom,
+                    isFinal: isFinal,
+                  );
+                },
               );
             }),
           ),
@@ -164,6 +265,12 @@ class TripPage extends GetView<Home2Controller> {
                 ],
               ),
             ),
+          ),
+          Positioned(
+            top: 88,
+            left: 0,
+            right: 0,
+            child: Center(child: _originPickerCard(trip)),
           ),
           Positioned(
             right: 10,
