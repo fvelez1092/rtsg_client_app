@@ -23,28 +23,42 @@ class DashboardPage extends GetView<DashboardController> {
     final colors = theme.colorScheme;
     final bottomSafeArea = MediaQuery.viewPaddingOf(context).bottom;
 
-    final contentBottomInset =
-        _navigationHeight + _navigationBottomGap + bottomSafeArea + _contentGap;
-
     return Obx(() {
       final navigationVisible = controller.isNavigationVisible.value;
+      final contentBottomInset = navigationVisible
+          ? _navigationHeight +
+                _navigationBottomGap +
+                bottomSafeArea +
+                _contentGap
+          : bottomSafeArea + 8;
 
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         extendBody: true,
-        body: NotificationListener<ScrollNotification>(
-          onNotification: controller.handleScrollNotification,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: contentBottomInset),
-            child: IndexedStack(
-              index: controller.selectedIndex.value,
-              children: const [
-                HomePage(),
-                ActivityPage(),
-                WalletPage(),
-                AccountPage(),
-              ],
-            ),
+        body: AnimatedPadding(
+          duration: const Duration(milliseconds: 190),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.only(bottom: contentBottomInset),
+          child: IndexedStack(
+            index: controller.selectedIndex.value,
+            children: [
+              PrimaryScrollController(
+                controller: controller.tabScrollControllers[0],
+                child: const HomePage(),
+              ),
+              PrimaryScrollController(
+                controller: controller.tabScrollControllers[1],
+                child: const ActivityPage(),
+              ),
+              PrimaryScrollController(
+                controller: controller.tabScrollControllers[2],
+                child: const WalletPage(),
+              ),
+              PrimaryScrollController(
+                controller: controller.tabScrollControllers[3],
+                child: const AccountPage(),
+              ),
+            ],
           ),
         ),
         bottomNavigationBar: SafeArea(
@@ -60,9 +74,9 @@ class DashboardPage extends GetView<DashboardController> {
             child: AnimatedSlide(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
-              offset: navigationVisible ? Offset.zero : const Offset(0, 1.35),
+              offset: navigationVisible ? Offset.zero : const Offset(0, 1.45),
               child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 160),
+                duration: const Duration(milliseconds: 150),
                 curve: Curves.easeOut,
                 opacity: navigationVisible ? 1 : 0,
                 child: Align(
@@ -104,22 +118,25 @@ class DashboardPage extends GetView<DashboardController> {
                               ),
                               labelTextStyle:
                                   WidgetStateProperty.resolveWith((states) {
-                                final selected =
-                                    states.contains(WidgetState.selected);
-                                return theme.textTheme.labelSmall?.copyWith(
-                                  fontSize: 11,
-                                  color: selected
-                                      ? colors.primary
-                                      : colors.onSurface.withValues(alpha: 0.58),
-                                  fontWeight: selected
-                                      ? FontWeight.w800
-                                      : FontWeight.w500,
+                                    final selected = states.contains(
+                                      WidgetState.selected,
+                                    );
+                                    return theme.textTheme.labelSmall?.copyWith(
+                                      fontSize: 11,
+                                      color: selected
+                                          ? colors.primary
+                                          : colors.onSurface.withValues(
+                                              alpha: 0.58,
+                                            ),
+                                      fontWeight: selected
+                                          ? FontWeight.w800
+                                          : FontWeight.w500,
+                                    );
+                                  }),
+                              iconTheme: WidgetStateProperty.resolveWith((states) {
+                                final selected = states.contains(
+                                  WidgetState.selected,
                                 );
-                              }),
-                              iconTheme:
-                                  WidgetStateProperty.resolveWith((states) {
-                                final selected =
-                                    states.contains(WidgetState.selected);
                                 return IconThemeData(
                                   size: selected ? 24 : 22,
                                   color: selected
