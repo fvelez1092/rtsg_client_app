@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:app_rtsg_client/application/trip_controller.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/data/models/trip_status.dart';
+import 'package:app_rtsg_client/presentation/pages/trip/components/route_input_sheet.dart';
 import 'package:app_rtsg_client/presentation/pages/trip/components/trip_panel.dart';
 import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
 
@@ -27,6 +28,71 @@ class TripPage extends GetView<TripController> {
             color: AppColors.textPrimary,
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _openRouteEditor() async {
+    controller.openDestinationSheet();
+
+    await Get.to(
+      () => Scaffold(
+        backgroundColor: AppColors.surface,
+        body: RouteInputSheet(
+          onClose: () => Get.back(),
+          mode: RouteSelectMode.destination,
+        ),
+      ),
+      transition: Transition.cupertino,
+    );
+  }
+
+  Widget _routeSummaryCard() {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 330),
+      padding: const EdgeInsets.fromLTRB(13, 10, 10, 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.97),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderSoft),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                _RouteSummaryLine(
+                  color: AppColors.brandGreen,
+                  text: controller.originAddress.value,
+                ),
+                const SizedBox(height: 7),
+                _RouteSummaryLine(
+                  color: AppColors.brandRed,
+                  text: controller.destinationAddress.value,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _openRouteEditor,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.brandGreen,
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+            ),
+            child: const Text(
+              'Cambiar',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -253,15 +319,30 @@ class TripPage extends GetView<TripController> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _roundBackButton(),
-                  const Spacer(),
-                  if (reservationLabel != null)
-                    _reservationBadge(reservationLabel),
-                ],
-              ),
+              child: Obx(() {
+                final hasDestination = controller.destinationLatLng.value != null;
+
+                if (hasDestination) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _roundBackButton(),
+                      const SizedBox(width: 10),
+                      Expanded(child: _routeSummaryCard()),
+                    ],
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _roundBackButton(),
+                    const Spacer(),
+                    if (reservationLabel != null)
+                      _reservationBadge(reservationLabel),
+                  ],
+                );
+              }),
             ),
           ),
           Positioned(
@@ -270,26 +351,75 @@ class TripPage extends GetView<TripController> {
             right: 0,
             child: Center(child: _originPickerCard()),
           ),
-          Positioned(
-            right: 10,
-            bottom: screenHeight * 0.39,
-            child: _attribution(),
-          ),
-          DraggableScrollableSheet(
-            initialChildSize: 0.38,
-            minChildSize: 0.30,
-            maxChildSize: 0.72,
-            snap: true,
-            builder: (context, scrollController) {
-              return TripPanel(
-                scrollController: scrollController,
-                isReservation: isReservation,
-                reservationLabel: reservationLabel,
-              );
-            },
-          ),
+          Obx(() {
+            final hasRoute =
+                controller.destinationLatLng.value != null &&
+                (controller.routePoints.length >= 2 ||
+                    controller.isCalculating.value);
+
+            return Positioned(
+              right: 10,
+              bottom: screenHeight * (hasRoute ? 0.58 : 0.36),
+              child: _attribution(),
+            );
+          }),
+          Obx(() {
+            final hasRoute =
+                controller.destinationLatLng.value != null &&
+                (controller.routePoints.length >= 2 ||
+                    controller.isCalculating.value);
+
+            return DraggableScrollableSheet(
+              key: ValueKey(hasRoute),
+              initialChildSize: hasRoute ? 0.56 : 0.34,
+              minChildSize: hasRoute ? 0.44 : 0.28,
+              maxChildSize: hasRoute ? 0.86 : 0.54,
+              snap: true,
+              snapSizes: hasRoute ? const [0.56, 0.86] : const [0.34, 0.54],
+              builder: (context, scrollController) {
+                return TripPanel(
+                  scrollController: scrollController,
+                  isReservation: isReservation,
+                  reservationLabel: reservationLabel,
+                );
+              },
+            );
+          }),
         ],
       ),
+    );
+  }
+}
+
+class _RouteSummaryLine extends StatelessWidget {
+  final Color color;
+  final String text;
+
+  const _RouteSummaryLine({required this.color, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text.isEmpty ? 'Ubicación pendiente' : text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
