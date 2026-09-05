@@ -12,6 +12,90 @@ import 'package:app_rtsg_client/core/theme/app_colors.dart';
 class TripPage extends GetView<Home2Controller> {
   const TripPage({super.key});
 
+  Widget _buildCenterLabel(String label) {
+    return IgnorePointer(
+      child: Center(
+        child: Transform.translate(
+          offset: const Offset(0, -46),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 120),
+            opacity: label.trim().isEmpty ? 0 : 1,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surface.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 12,
+                    color: AppColors.shadow,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.place_outlined,
+                    size: 16,
+                    color: AppColors.brandGreen,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return IgnorePointer(
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.textPrimary.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.taxiYellow,
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Calculando ruta…',
+                style: TextStyle(color: AppColors.surface, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final trip = Get.find<TripController>();
@@ -28,33 +112,34 @@ class TripPage extends GetView<Home2Controller> {
                 children: [
                   Obx(() {
                     final origin = trip.originLatLng.value;
-                    final dest = trip.destinationLatLng.value;
+                    final route = trip.routePoints;
 
-                    final showMarkers =
-                        origin != null &&
-                        dest != null &&
-                        trip.routePoints.length >= 2;
-
-                    return MapPicker(
-                      initialCenter: controller.lastCenter,
-                      initialZoom: 16,
-                      centerLabel: controller.centerLabel.value,
-                      onChanged: (center, zoom, {required isFinal}) {
-                        controller.onMapChanged(center, zoom, isFinal: isFinal);
-                      },
-
-                      // ✅ Ruta
-                      routePoints: trip.routePoints,
-                      showRoute: trip.routePoints.length >= 2,
-
-                      // ✅ Marcadores inicio/fin
-                      showRouteMarkers: showMarkers,
-                      routeStart: showMarkers ? origin : null,
-                      routeEnd: showMarkers ? dest : null,
-
-                      // ✅ Overlay cargando ruta
-                      showLoadingOverlay: trip.isCalculating.value,
-                      loadingText: 'Calculando ruta…',
+                    return Stack(
+                      children: [
+                        MapPicker(
+                          initialCenter: controller.lastCenter,
+                          initialZoom: 16,
+                          path: route,
+                          showPath: route.length >= 2,
+                          userPosition: origin,
+                          showUserMarker: origin != null,
+                          polylineColor: AppColors.brandGreen,
+                          onChanged: (center, zoom, {required isFinal}) {
+                            controller.onMapChanged(
+                              center,
+                              zoom,
+                              isFinal: isFinal,
+                            );
+                          },
+                        ),
+                        Positioned.fill(
+                          child: _buildCenterLabel(
+                            controller.centerLabel.value,
+                          ),
+                        ),
+                        if (trip.isCalculating.value)
+                          Positioned.fill(child: _buildLoadingOverlay()),
+                      ],
                     );
                   }),
                   const Positioned(top: 12, left: 12, child: AppDrawerButton()),
