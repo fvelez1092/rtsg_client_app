@@ -42,27 +42,24 @@ class MapPicker extends StatefulWidget {
     required this.initialCenter,
     required this.initialZoom,
     required this.onChanged,
-    this.tileUrlTemplate = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    this.subdomains = const ['a', 'b', 'c'],
+    this.tileUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    this.subdomains = const <String>[],
     this.userAgentPackageName = 'com.example.app_rtsg_client',
     this.moveThrottle = const Duration(milliseconds: 80),
     this.showCrosshair = true,
     this.showAttribution = true,
 
-    // tracking defaults
     this.driverPosition,
     this.path = const <LatLng>[],
     this.showDriverMarker = false,
     this.showPath = false,
     this.followDriver = false,
 
-    // user / destination defaults
     this.userPosition,
     this.showUserMarker = false,
     this.destinationPosition,
     this.showDestinationMarker = false,
 
-    // styling
     this.polylineColor = AppColors.brandGreen,
   });
 
@@ -190,113 +187,126 @@ class _MapPickerState extends State<MapPicker> {
     final user = widget.userPosition;
     final destination = widget.destinationPosition;
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: widget.initialCenter,
-            initialZoom: widget.initialZoom,
-            interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.all,
+    return SizedBox.expand(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: widget.initialCenter,
+              initialZoom: widget.initialZoom,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
             ),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: widget.tileUrlTemplate,
-              subdomains: widget.subdomains,
-              userAgentPackageName: widget.userAgentPackageName,
-            ),
-            if (widget.showPath && widget.path.length >= 2)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: widget.path,
-                    strokeWidth: 10,
-                    color: widget.polylineColor.withValues(alpha: 0.35),
-                  ),
-                  Polyline(
-                    points: widget.path,
-                    strokeWidth: 6,
-                    color: widget.polylineColor,
-                  ),
-                ],
+            children: [
+              TileLayer(
+                urlTemplate: widget.tileUrlTemplate,
+                subdomains: widget.subdomains,
+                userAgentPackageName: widget.userAgentPackageName,
               ),
-            if (widget.showUserMarker && user != null)
-              MarkerLayer(
-                markers: [
-                  Marker(point: user, width: 44, height: 44, child: _userDot()),
-                ],
-              ),
-            if (widget.showDestinationMarker && destination != null)
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: destination,
-                    width: 44,
-                    height: 44,
-                    child: _destinationMarker(),
-                  ),
-                ],
-              ),
-            if (widget.showDriverMarker && driver != null)
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: driver,
-                    width: 48,
-                    height: 48,
-                    child: const Icon(
-                      Icons.directions_car_rounded,
-                      size: 36,
-                      color: AppColors.brandRed,
+              if (widget.showPath && widget.path.length >= 2)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: widget.path,
+                      strokeWidth: 10,
+                      color: widget.polylineColor.withValues(alpha: 0.35),
                     ),
+                    Polyline(
+                      points: widget.path,
+                      strokeWidth: 6,
+                      color: widget.polylineColor,
+                    ),
+                  ],
+                ),
+              if (widget.showUserMarker && user != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: user,
+                      width: 44,
+                      height: 44,
+                      child: _userDot(),
+                    ),
+                  ],
+                ),
+              if (widget.showDestinationMarker && destination != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: destination,
+                      width: 44,
+                      height: 44,
+                      child: _destinationMarker(),
+                    ),
+                  ],
+                ),
+              if (widget.showDriverMarker && driver != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: driver,
+                      width: 48,
+                      height: 48,
+                      child: const Icon(
+                        Icons.directions_car_rounded,
+                        size: 36,
+                        color: AppColors.brandRed,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          if (widget.showCrosshair)
+            const IgnorePointer(
+              child: Center(
+                child: Icon(
+                  Icons.add_location_alt_outlined,
+                  size: 34,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          if (_isMoving)
+            Positioned(
+              top: 12,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                ],
-              ),
-          ],
-        ),
-        if (widget.showCrosshair)
-          const IgnorePointer(
-            child: Icon(
-              Icons.add_location_alt_outlined,
-              size: 30,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        Positioned(
-          top: 12,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 120),
-            opacity: _isMoving ? 1 : 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.textPrimary.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Text(
-                'Moviendo mapa…',
-                style: TextStyle(color: AppColors.surface, fontSize: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.textPrimary.withValues(alpha: 0.72),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'Moviendo mapa…',
+                    style: TextStyle(color: AppColors.surface, fontSize: 12),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        if (widget.showAttribution)
-          Positioned(
-            right: 8,
-            bottom: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              color: AppColors.surface.withValues(alpha: 0.85),
-              child: const Text(
-                '© OpenStreetMap contributors',
-                style: TextStyle(fontSize: 11, color: AppColors.textPrimary),
+          if (widget.showAttribution)
+            Positioned(
+              right: 8,
+              bottom: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                color: AppColors.surface.withValues(alpha: 0.85),
+                child: const Text(
+                  '© OpenStreetMap contributors',
+                  style: TextStyle(fontSize: 11, color: AppColors.textPrimary),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
