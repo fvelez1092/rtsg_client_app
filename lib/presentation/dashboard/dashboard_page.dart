@@ -1,5 +1,8 @@
 import 'package:app_rtsg_client/application/dashboard_controller.dart';
+import 'package:app_rtsg_client/presentation/pages/account/account_page.dart';
+import 'package:app_rtsg_client/presentation/pages/activity/activity_page.dart';
 import 'package:app_rtsg_client/presentation/pages/home/home_page.dart';
+import 'package:app_rtsg_client/presentation/pages/wallet/wallet_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -15,19 +18,21 @@ class DashboardPage extends GetView<DashboardController> {
       () => Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
 
-        // Permite que el contenido continúe detrás de la barra flotante.
+        // El contenido continúa detrás de la barra flotante.
         extendBody: true,
 
+        // IndexedStack mantiene vivo el estado de cada tab al cambiar de vista.
         body: IndexedStack(
           index: controller.selectedIndex.value,
           children: const [
             HomePage(),
-            _ActivityPlaceholder(),
-            _WalletPlaceholder(),
-            _ProfilePlaceholder(),
+            ActivityPage(),
+            WalletPage(),
+            AccountPage(),
           ],
         ),
 
+        // Navegación flotante original del Dashboard.
         bottomNavigationBar: SafeArea(
           minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Container(
@@ -50,13 +55,10 @@ class DashboardPage extends GetView<DashboardController> {
                 height: 72,
                 backgroundColor: colors.surface,
                 elevation: 0,
-
                 indicatorColor: colors.primary.withOpacity(0.15),
-
                 indicatorShape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-
                 labelTextStyle: WidgetStateProperty.resolveWith((states) {
                   final isSelected = states.contains(WidgetState.selected);
 
@@ -67,7 +69,6 @@ class DashboardPage extends GetView<DashboardController> {
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   );
                 }),
-
                 iconTheme: WidgetStateProperty.resolveWith((states) {
                   final isSelected = states.contains(WidgetState.selected);
 
@@ -110,32 +111,5 @@ class DashboardPage extends GetView<DashboardController> {
         ),
       ),
     );
-  }
-}
-
-class _ActivityPlaceholder extends StatelessWidget {
-  const _ActivityPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Actividad'));
-  }
-}
-
-class _WalletPlaceholder extends StatelessWidget {
-  const _WalletPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Billetera'));
-  }
-}
-
-class _ProfilePlaceholder extends StatelessWidget {
-  const _ProfilePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Cuenta'));
   }
 }
