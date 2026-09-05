@@ -69,6 +69,58 @@ class _MapSelectPageState extends State<MapSelectPage> {
     );
   }
 
+  Widget _buildCenterLabel() {
+    return IgnorePointer(
+      child: Center(
+        child: Transform.translate(
+          offset: const Offset(0, -46),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 120),
+            opacity: _label.trim().isEmpty ? 0 : 1,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surface.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 12,
+                    color: AppColors.shadow,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.place_outlined,
+                    size: 16,
+                    color: AppColors.brandGreen,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      _label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,7 +130,7 @@ class _MapSelectPageState extends State<MapSelectPage> {
           MapPicker(
             initialCenter: _center,
             initialZoom: widget.initialZoom,
-            centerLabel: _label,
+            polylineColor: AppColors.brandGreen,
             onChanged: (center, zoom, {required isFinal}) {
               _center = center;
 
@@ -92,7 +144,7 @@ class _MapSelectPageState extends State<MapSelectPage> {
               _resolve(center);
             },
           ),
-
+          Positioned.fill(child: _buildCenterLabel()),
           Positioned(
             top: 12,
             left: 12,
@@ -113,7 +165,6 @@ class _MapSelectPageState extends State<MapSelectPage> {
               ),
             ),
           ),
-
           Positioned(
             left: 16,
             right: 16,
