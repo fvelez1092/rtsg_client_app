@@ -34,6 +34,13 @@ class MapPicker extends StatefulWidget {
   final LatLng? destinationPosition;
   final bool showDestinationMarker;
 
+  // Dynamic camera fitting
+  final bool autoFit;
+  final List<LatLng> fitPoints;
+  final EdgeInsets fitPadding;
+  final double fitMinZoom;
+  final double? fitMaxZoom;
+
   // Styling
   final Color polylineColor;
 
@@ -48,18 +55,20 @@ class MapPicker extends StatefulWidget {
     this.moveThrottle = const Duration(milliseconds: 80),
     this.showCrosshair = true,
     this.showAttribution = true,
-
     this.driverPosition,
     this.path = const <LatLng>[],
     this.showDriverMarker = false,
     this.showPath = false,
     this.followDriver = false,
-
     this.userPosition,
     this.showUserMarker = false,
     this.destinationPosition,
     this.showDestinationMarker = false,
-
+    this.autoFit = false,
+    this.fitPoints = const <LatLng>[],
+    this.fitPadding = const EdgeInsets.all(32),
+    this.fitMinZoom = 11.5,
+    this.fitMaxZoom = 16.2,
     this.polylineColor = AppColors.brandGreen,
   });
 
@@ -70,10 +79,12 @@ class MapPicker extends StatefulWidget {
 class _MapPickerState extends State<MapPicker> {
   final MapController _mapController = MapController();
   StreamSubscription<MapEvent>? _sub;
+  Timer? _fitTrailingTimer;
 
   bool _isMoving = false;
   bool _userInteracting = false;
   DateTime _lastTick = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastFitTick = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -105,6 +116,8 @@ class _MapPickerState extends State<MapPicker> {
 
       if (mounted) setState(() {});
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleFit(force: true));
   }
 
   @override
@@ -120,14 +133,73 @@ class _MapPickerState extends State<MapPicker> {
       return;
     }
 
-    if (widget.initialCenter != oldWidget.initialCenter ||
-        widget.initialZoom != oldWidget.initialZoom) {
+    final fitChanged =
+        widget.autoFit != oldWidget.autoFit ||
+        widget.fitPadding != oldWidget.fitPadding ||
+        widget.fitMinZoom != oldWidget.fitMinZoom ||
+        widget.fitMaxZoom != oldWidget.fitMaxZoom ||
+        !_samePoints(widget.fitPoints, oldWidget.fitPoints);
+
+    if (widget.autoFit && fitChanged) {
+      _scheduleFit();
+      return;
+    }
+
+    if (!widget.autoFit &&
+        (widget.initialCenter != oldWidget.initialCenter ||
+            widget.initialZoom != oldWidget.initialZoom)) {
       _mapController.move(widget.initialCenter, widget.initialZoom);
     }
   }
 
+  bool _samePoints(List<LatLng> a, List<LatLng> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  void _scheduleFit({bool force = false}) {
+    if (!mounted || !widget.autoFit || widget.fitPoints.length < 2) return;
+    if (_userInteracting) return;
+
+    const throttle = Duration(milliseconds: 70);
+    final now = DateTime.now();
+    final elapsed = now.difference(_lastFitTick);
+
+    if (force || elapsed >= throttle) {
+      _fitTrailingTimer?.cancel();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fitRoute());
+      return;
+    }
+
+    _fitTrailingTimer?.cancel();
+    _fitTrailingTimer = Timer(throttle - elapsed, () {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fitRoute());
+    });
+  }
+
+  void _fitRoute() {
+    if (!mounted || !widget.autoFit || widget.fitPoints.length < 2) return;
+    if (_userInteracting) return;
+
+    _lastFitTick = DateTime.now();
+
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: LatLngBounds.fromPoints(widget.fitPoints),
+        padding: widget.fitPadding,
+        minZoom: widget.fitMinZoom,
+        maxZoom: widget.fitMaxZoom,
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _fitTrailingTimer?.cancel();
     _sub?.cancel();
     super.dispose();
   }
