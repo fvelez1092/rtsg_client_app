@@ -19,15 +19,25 @@ class TripPage extends StatefulWidget {
 class _TripPageState extends State<TripPage> {
   TripController get controller => Get.find<TripController>();
 
-  // Estado visual del panel de confirmación. La lógica del viaje vive en
-  // TripController.
+  // Solo controla presentación. La lógica del viaje permanece en TripController.
   double _routeSheetExtent = 0.55;
+  double _searchSheetExtent = 0.32;
 
-  bool _onRouteSheetNotification(DraggableScrollableNotification notification) {
+  bool _onSheetNotification(
+    DraggableScrollableNotification notification, {
+    required bool hasRoute,
+  }) {
     final next = notification.extent;
-    if ((next - _routeSheetExtent).abs() < 0.008) return false;
+    final current = hasRoute ? _routeSheetExtent : _searchSheetExtent;
+    if ((next - current).abs() < 0.008) return false;
 
-    setState(() => _routeSheetExtent = next);
+    setState(() {
+      if (hasRoute) {
+        _routeSheetExtent = next;
+      } else {
+        _searchSheetExtent = next;
+      }
+    });
     return false;
   }
 
@@ -318,42 +328,48 @@ class _TripPageState extends State<TripPage> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Obx(() {
-              final origin = controller.originLatLng.value;
-              final destination = controller.destinationLatLng.value;
-              final route = controller.routePoints;
-              final hasRoute = route.length >= 2;
-              final isPickingOrigin =
-                  destination == null &&
-                  controller.status.value == TripStatus.idle;
+          // Antes de escoger destino, el mapa ocupa solo el área realmente
+          // visible sobre el panel. Al arrastrar el panel cambia su altura y el
+          // mapa se redimensiona manteniendo el origen en el centro visible.
+          Obx(() {
+            final origin = controller.originLatLng.value;
+            final destination = controller.destinationLatLng.value;
+            final route = controller.routePoints;
+            final hasRoute = route.length >= 2;
+            final isPickingOrigin =
+                destination == null &&
+                controller.status.value == TripStatus.idle;
 
-              final mapCenter = hasRoute
-                  ? route[route.length ~/ 2]
-                  : (origin ?? controller.lastCenter);
+            final mapCenter = hasRoute
+                ? route[route.length ~/ 2]
+                : (origin ?? controller.lastCenter);
 
-              // El bounds de la ruta ya toma en cuenta la separación real entre
-              // origen y destino. Además limitamos cuánto puede acercarse la
-              // cámara según los kilómetros del viaje.
-              final actualExtent = _routeSheetExtent.clamp(0.40, 0.70);
-              final progress =
-                  ((actualExtent - 0.40) / (0.70 - 0.40)).clamp(0.0, 1.0);
-              final cameraBottomExtent = 0.31 + (progress * 0.10);
-              final distanceKm = controller.distanceKm.value;
-              final distanceMaxZoom = _fitMaxZoomForDistance(distanceKm);
+            final actualExtent = _routeSheetExtent.clamp(0.40, 0.70);
+            final progress =
+                ((actualExtent - 0.40) / (0.70 - 0.40)).clamp(0.0, 1.0);
+            final cameraBottomExtent = 0.31 + (progress * 0.10);
+            final distanceKm = controller.distanceKm.value;
+            final distanceMaxZoom = _fitMaxZoomForDistance(distanceKm);
 
-              final fitPadding = EdgeInsets.fromLTRB(
-                30,
-                hasRoute ? 106 : 28,
-                30,
-                hasRoute ? (screenHeight * cameraBottomExtent) + 14 : 28,
-              );
+            final fitPadding = EdgeInsets.fromLTRB(
+              30,
+              hasRoute ? 106 : 28,
+              30,
+              hasRoute ? (screenHeight * cameraBottomExtent) + 14 : 28,
+            );
 
-              final fitPoints = hasRoute
-                  ? List<LatLng>.from(route)
-                  : const <LatLng>[];
+            final fitPoints = hasRoute
+                ? List<LatLng>.from(route)
+                : const <LatLng>[];
 
-              return MapPicker(
+            return Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: isPickingOrigin
+                  ? screenHeight * _searchSheetExtent
+                  : 0,
+              child: MapPicker(
                 initialCenter: mapCenter,
                 initialZoom: hasRoute ? distanceMaxZoom : 16,
                 path: route,
@@ -378,9 +394,10 @@ class _TripPageState extends State<TripPage> {
                     isFinal: isFinal,
                   );
                 },
-              );
-            }),
-          ),
+              ),
+            );
+          }),
+
           Positioned(
             top: 0,
             left: 0,
@@ -417,25 +434,28 @@ class _TripPageState extends State<TripPage> {
               ),
             ),
           ),
+
           Positioned(
             top: 88,
             left: 0,
             right: 0,
             child: Center(child: _originPickerCard()),
           ),
+
           Obx(() {
             final hasRoute =
                 controller.destinationLatLng.value != null &&
                 (controller.routePoints.length >= 2 ||
                     controller.isCalculating.value);
 
-            final extent = hasRoute ? _routeSheetExtent : 0.34;
+            final extent = hasRoute ? _routeSheetExtent : _searchSheetExtent;
             return Positioned(
               right: 10,
               bottom: (screenHeight * extent) + 8,
               child: _attribution(),
             );
           }),
+
           Obx(() {
             final hasRoute =
                 controller.destinationLatLng.value != null &&
@@ -450,20 +470,30 @@ class _TripPageState extends State<TripPage> {
               snap: true,
               snapSizes: hasRoute
                   ? const [0.40, 0.55, 0.70]
-                  : const [0.32, 0.50],
+                  : const [0.26, 0.32, 0.50],
               builder: (context, scrollController) {
-                return TripPanel(
-                  scrollController: scrollController,
-                  isReservation: isReservation,
-                  reservationLabel: reservationLabel,
-                );
+                // Estas lecturas mantienen sincronizados textos y precios que
+                // pertenecen al panel pero cambian desde TripController.
+                return Obx(() {
+                  controller.originAddress.value;
+                  controller.destinationAddress.value;
+                  controller.selectedCategory.value;
+                  controller.priceBoost.value;
+
+                  return TripPanel(
+                    scrollController: scrollController,
+                    isReservation: isReservation,
+                    reservationLabel: reservationLabel,
+                  );
+                });
               },
             );
 
-            if (!hasRoute) return sheet;
-
             return NotificationListener<DraggableScrollableNotification>(
-              onNotification: _onRouteSheetNotification,
+              onNotification: (notification) => _onSheetNotification(
+                notification,
+                hasRoute: hasRoute,
+              ),
               child: sheet,
             );
           }),
