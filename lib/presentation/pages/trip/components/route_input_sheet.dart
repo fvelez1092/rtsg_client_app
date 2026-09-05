@@ -1,13 +1,13 @@
-import 'package:app_rtsg_client/application/home2_controller.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
+
 import 'package:app_rtsg_client/application/trip_controller.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/data/models/map_point_result_model.dart';
 import 'package:app_rtsg_client/data/models/saved_address_model.dart';
 import 'package:app_rtsg_client/data/services/saved_address_service.dart';
 import 'package:app_rtsg_client/presentation/pages/trip/components/trip_location_picker.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:latlong2/latlong.dart';
 
 enum RouteSelectMode { origin, destination }
 
@@ -17,36 +17,32 @@ class RouteInputSheet extends GetView<TripController> {
 
   const RouteInputSheet({super.key, required this.onClose, required this.mode});
 
-  Future<void> _useSavedAddress(
-    SavedAddress address,
-    Home2Controller home,
-  ) async {
+  Future<void> _useSavedAddress(SavedAddress address) async {
     if (mode == RouteSelectMode.origin) {
-      home.setOriginFromExternal(point: address.point, address: address.address);
+      controller.setOriginFromExternal(
+        point: address.point,
+        address: address.address,
+      );
       onClose();
       return;
     }
 
-    controller.destinationLatLng.value = address.point;
-    controller.destinationAddress.value = address.address;
-    await controller.recalculateIfPossible();
+    await controller.setDestination(
+      point: address.point,
+      address: address.address,
+    );
     onClose();
   }
 
-  Future<void> _selectOnMap(
-    BuildContext context,
-    Home2Controller home,
-  ) async {
+  Future<void> _selectOnMap(BuildContext context) async {
     FocusScope.of(context).unfocus();
 
     final LatLng initial = mode == RouteSelectMode.destination
         ? (controller.destinationLatLng.value ??
               controller.originLatLng.value ??
-              const LatLng(-0.18065, -78.46783))
-        : (controller.originLatLng.value ??
-              const LatLng(-0.18065, -78.46783));
+              controller.lastCenter)
+        : (controller.originLatLng.value ?? controller.lastCenter);
 
-    // El selector debe abrirse como una página completa, no encima del sheet.
     onClose();
     await Future<void>.delayed(const Duration(milliseconds: 180));
 
@@ -63,18 +59,21 @@ class RouteInputSheet extends GetView<TripController> {
     if (result == null) return;
 
     if (mode == RouteSelectMode.destination) {
-      controller.destinationLatLng.value = result.point;
-      controller.destinationAddress.value = result.name;
-      await controller.recalculateIfPossible();
+      await controller.setDestination(
+        point: result.point,
+        address: result.name,
+      );
       return;
     }
 
-    home.setOriginFromExternal(point: result.point, address: result.name);
+    controller.setOriginFromExternal(
+      point: result.point,
+      address: result.name,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final home = Get.find<Home2Controller>();
     final savedAddresses = SavedAddressService().getAll();
     final isOrigin = mode == RouteSelectMode.origin;
 
@@ -152,7 +151,7 @@ class RouteInputSheet extends GetView<TripController> {
                 ),
                 suffixIcon: IconButton(
                   tooltip: 'Seleccionar en el mapa',
-                  onPressed: () => _selectOnMap(context, home),
+                  onPressed: () => _selectOnMap(context),
                   icon: const Icon(
                     Icons.map_outlined,
                     color: AppColors.brandGreen,
@@ -253,7 +252,7 @@ class RouteInputSheet extends GetView<TripController> {
                           return;
                         }
 
-                        home.setOriginFromExternal(
+                        controller.setOriginFromExternal(
                           point: point,
                           address: name,
                         );
@@ -283,14 +282,26 @@ class RouteInputSheet extends GetView<TripController> {
                           subtitle: controller.originAddress.value.isEmpty
                               ? 'Usar ubicación del GPS'
                               : controller.originAddress.value,
-                          onTap: onClose,
+                          onTap: () async {
+                            final ok = await controller.useCurrentLocation();
+                            if (ok) {
+                              onClose();
+                              return;
+                            }
+
+                            Get.snackbar(
+                              'Ubicación no disponible',
+                              'No pudimos obtener tu ubicación actual.',
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          },
                         ),
                       ),
                     _ActionTile(
                       icon: Icons.map_outlined,
                       title: 'Seleccionar en el mapa',
                       subtitle: 'Mueve el mapa para precisar la dirección',
-                      onTap: () => _selectOnMap(context, home),
+                      onTap: () => _selectOnMap(context),
                     ),
                     if (savedAddresses.isNotEmpty) ...[
                       const Padding(
@@ -312,7 +323,7 @@ class RouteInputSheet extends GetView<TripController> {
                                   : Icons.bookmark_rounded,
                           title: address.label,
                           subtitle: address.address,
-                          onTap: () => _useSavedAddress(address, home),
+                          onTap: () => _useSavedAddress(address),
                         ),
                       ),
                     ],
@@ -329,6 +340,7 @@ class RouteInputSheet extends GetView<TripController> {
 
 class _CloseButton extends StatelessWidget {
   final VoidCallback onTap;
+
   const _CloseButton({required this.onTap});
 
   @override
