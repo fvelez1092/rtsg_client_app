@@ -38,7 +38,16 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   late LatLng _center;
   String _address = 'Buscando dirección…';
   bool _resolving = false;
+  bool _isMapMoving = false;
   int _requestId = 0;
+
+  bool get _canConfirm {
+    final address = _address.trim();
+    return !_resolving &&
+        !_isMapMoving &&
+        address.isNotEmpty &&
+        address != 'Dirección no disponible';
+  }
 
   @override
   void initState() {
@@ -57,10 +66,12 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   Future<void> _resolve(LatLng point) async {
     final currentRequest = ++_requestId;
 
-    setState(() {
-      _resolving = true;
-      _address = 'Buscando dirección…';
-    });
+    if (mounted) {
+      setState(() {
+        _resolving = true;
+        _address = 'Buscando dirección…';
+      });
+    }
 
     final result = await _geocoder.reverse(
       lat: point.latitude,
@@ -76,7 +87,7 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   }
 
   Future<void> _confirm() async {
-    if (_resolving || _address.trim().isEmpty) return;
+    if (!_canConfirm) return;
 
     if (widget.saveAsUserAddress) {
       final label = _labelController.text.trim();
@@ -107,7 +118,17 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardInset = mediaQuery.viewInsets.bottom;
+    final safeBottom = mediaQuery.padding.bottom;
+    final bottomInset = keyboardInset > 0
+        ? keyboardInset + 12
+        : safeBottom + 12;
+    final maxCardHeight = mediaQuery.size.height *
+        (widget.saveAsUserAddress ? 0.50 : 0.38);
+
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
@@ -118,15 +139,26 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
               polylineColor: AppColors.brandGreen,
               onChanged: (center, zoom, {required isFinal}) {
                 _center = center;
+
                 if (isFinal) {
+                  if (mounted) {
+                    setState(() => _isMapMoving = false);
+                  }
                   _resolve(center);
-                } else if (!_resolving && mounted) {
-                  setState(() => _address = 'Buscando dirección…');
+                  return;
+                }
+
+                if (mounted) {
+                  setState(() {
+                    _isMapMoving = true;
+                    _address = 'Buscando dirección…';
+                  });
                 }
               },
             ),
           ),
           SafeArea(
+            bottom: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
@@ -169,17 +201,18 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
               ),
             ),
           ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 16,
-            child: SafeArea(
-              top: false,
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            left: 12,
+            right: 12,
+            bottom: bottomInset,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxCardHeight),
               child: Container(
-                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: const [
                     BoxShadow(
                       color: AppColors.shadow,
@@ -188,103 +221,153 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
                     ),
                   ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 5,
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: AppColors.borderSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                    ),
-                    const Text(
-                      'Punto seleccionado',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 2),
-                          child: Icon(
-                            Icons.location_on_rounded,
-                            color: AppColors.brandGreen,
-                            size: 24,
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 42,
+                          height: 5,
+                          margin: const EdgeInsets.only(bottom: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.borderSoft,
+                            borderRadius: BorderRadius.circular(99),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _address,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              height: 1.3,
+                      ),
+                      const Text(
+                        'Punto seleccionado',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.inputFill,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.borderSoft),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: AppColors.brandGreen.withValues(
+                                  alpha: 0.10,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.location_on_rounded,
+                                color: AppColors.brandGreen,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _address,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  if (_isMapMoving || _resolving) ...[
+                                    const SizedBox(height: 6),
+                                    const Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 13,
+                                          height: 13,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.brandGreen,
+                                          ),
+                                        ),
+                                        SizedBox(width: 7),
+                                        Text(
+                                          'Actualizando ubicación',
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (widget.saveAsUserAddress) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _labelController,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.done,
+                          decoration: InputDecoration(
+                            hintText: 'Nombre: Casa, Trabajo…',
+                            prefixIcon: const Icon(
+                              Icons.bookmark_outline_rounded,
+                              color: AppColors.brandGreen,
+                            ),
+                            filled: true,
+                            fillColor: AppColors.inputFill,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
                             ),
                           ),
                         ),
                       ],
-                    ),
-                    if (widget.saveAsUserAddress) ...[
                       const SizedBox(height: 14),
-                      TextField(
-                        controller: _labelController,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: InputDecoration(
-                          hintText: 'Nombre: Casa, Trabajo…',
-                          prefixIcon: const Icon(Icons.bookmark_outline_rounded),
-                          filled: true,
-                          fillColor: AppColors.inputFill,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton(
+                          onPressed: _canConfirm ? _confirm : null,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.brandGreen,
+                            foregroundColor: AppColors.surface,
+                            disabledBackgroundColor: AppColors.borderSoft,
+                            disabledForegroundColor: AppColors.textSecondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            _isMapMoving || _resolving
+                                ? 'Ubicando dirección…'
+                                : widget.confirmText,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: FilledButton(
-                        onPressed: _resolving ? null : _confirm,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.brandGreen,
-                          foregroundColor: AppColors.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: _resolving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.surface,
-                                ),
-                              )
-                            : Text(
-                                widget.confirmText,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
