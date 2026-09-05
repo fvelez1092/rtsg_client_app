@@ -14,9 +14,11 @@ class Home2Controller extends GetxController {
     : _geocoder = geocoder ?? MapboxGeocoder();
 
   final RxString centerLabel = 'Buscando ubicación…'.obs;
+  final RxBool isResolvingOrigin = false.obs;
 
   LatLng lastCenter = const LatLng(-0.18065, -78.46783);
   int _reqId = 0;
+  bool _originWasSelectedManually = false;
 
   @override
   void onInit() {
@@ -29,7 +31,9 @@ class Home2Controller extends GetxController {
     }
 
     ever<LatLng?>(_gpsService.currentPosition, (pos) {
-      if (pos != null && _tripController.destinationLatLng.value == null) {
+      if (pos != null &&
+          !_originWasSelectedManually &&
+          _tripController.destinationLatLng.value == null) {
         lastCenter = pos;
         _resolveAddress(pos);
       }
@@ -37,10 +41,14 @@ class Home2Controller extends GetxController {
   }
 
   void onMapChanged(LatLng center, double zoom, {required bool isFinal}) {
+    if (_tripController.destinationLatLng.value != null) return;
+
     lastCenter = center;
+    _originWasSelectedManually = true;
 
     if (!isFinal) {
       centerLabel.value = 'Buscando dirección…';
+      isResolvingOrigin.value = true;
       return;
     }
 
@@ -48,8 +56,10 @@ class Home2Controller extends GetxController {
   }
 
   void setOriginFromExternal({required LatLng point, required String address}) {
+    _originWasSelectedManually = true;
     lastCenter = point;
     centerLabel.value = address;
+    isResolvingOrigin.value = false;
     _tripController.setOrigin(address: address, point: point);
     update();
   }
@@ -64,6 +74,7 @@ class Home2Controller extends GetxController {
 
     if (position == null) return false;
 
+    _originWasSelectedManually = false;
     lastCenter = position;
     await _resolveAddress(position);
     return true;
@@ -71,6 +82,7 @@ class Home2Controller extends GetxController {
 
   Future<void> _resolveAddress(LatLng center) async {
     final currentReq = ++_reqId;
+    isResolvingOrigin.value = true;
 
     final placeName = await _geocoder.reverse(
       lat: center.latitude,
@@ -81,6 +93,7 @@ class Home2Controller extends GetxController {
 
     final resolved = placeName ?? 'Dirección no disponible';
     centerLabel.value = resolved;
+    isResolvingOrigin.value = false;
     _tripController.setOrigin(address: resolved, point: center);
   }
 
