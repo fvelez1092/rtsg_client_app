@@ -1,112 +1,47 @@
-import 'package:app_rtsg_client/presentation/pages/trip/components/trip_panel.dart';
-import 'package:app_rtsg_client/presentation/widgets/app_drawer.dart';
-import 'package:app_rtsg_client/presentation/widgets/drawer_button.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:app_rtsg_client/application/home2_controller.dart';
 import 'package:app_rtsg_client/application/trip_controller.dart';
-import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
+import 'package:app_rtsg_client/presentation/pages/trip/components/trip_panel.dart';
+import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
 
 class TripPage extends GetView<Home2Controller> {
   const TripPage({super.key});
 
-  Widget _buildCenterLabel(String label) {
-    return IgnorePointer(
-      child: Center(
-        child: Transform.translate(
-          offset: const Offset(0, -46),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 120),
-            opacity: label.trim().isEmpty ? 0 : 1,
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 320),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.surface.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 12,
-                    color: AppColors.shadow,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.place_outlined,
-                    size: 16,
-                    color: AppColors.brandGreen,
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+  Widget _roundBackButton() {
+    return Material(
+      color: AppColors.surface,
+      shape: const CircleBorder(),
+      elevation: 4,
+      shadowColor: AppColors.shadow,
+      child: InkWell(
+        onTap: () => Get.back(),
+        customBorder: const CircleBorder(),
+        child: const Padding(
+          padding: EdgeInsets.all(12),
+          child: Icon(
+            Icons.arrow_back_rounded,
+            size: 22,
+            color: AppColors.textPrimary,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLoadingOverlay() {
-    return IgnorePointer(
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppColors.textPrimary.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.taxiYellow,
-                ),
-              ),
-              SizedBox(width: 10),
-              Text(
-                'Calculando ruta…',
-                style: TextStyle(color: AppColors.surface, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReservationBadge(String label) {
+  Widget _reservationBadge(String label) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 235),
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      constraints: const BoxConstraints(maxWidth: 245),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(13),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,
-            blurRadius: 10,
+            blurRadius: 12,
             offset: Offset(0, 5),
           ),
         ],
@@ -114,12 +49,20 @@ class TripPage extends GetView<Home2Controller> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.event_available_rounded,
-            size: 18,
-            color: AppColors.brandGreen,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.brandGreen.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.event_available_rounded,
+              size: 19,
+              color: AppColors.brandGreen,
+            ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 9),
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,9 +72,10 @@ class TripPage extends GetView<Home2Controller> {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   label,
                   maxLines: 1,
@@ -149,69 +93,93 @@ class TripPage extends GetView<Home2Controller> {
     );
   }
 
+  Widget _attribution() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: const Text(
+        '© OpenStreetMap contributors',
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 9,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final trip = Get.find<TripController>();
     final args = Get.arguments;
-    final reservationLabel = args is Map && args['isReservation'] == true
+    final isReservation = args is Map && args['isReservation'] == true;
+    final reservationLabel = isReservation
         ? (args['reservationLabel'] ?? 'Reserva programada').toString()
         : null;
 
-    return Scaffold(
-      drawer: const AppDrawer(),
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              flex: 6,
-              child: Stack(
-                children: [
-                  Obx(() {
-                    final origin = trip.originLatLng.value;
-                    final route = trip.routePoints;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
-                    return Stack(
-                      children: [
-                        MapPicker(
-                          initialCenter: controller.lastCenter,
-                          initialZoom: 16,
-                          path: route,
-                          showPath: route.length >= 2,
-                          userPosition: origin,
-                          showUserMarker: origin != null,
-                          polylineColor: AppColors.brandGreen,
-                          onChanged: (center, zoom, {required isFinal}) {
-                            controller.onMapChanged(
-                              center,
-                              zoom,
-                              isFinal: isFinal,
-                            );
-                          },
-                        ),
-                        Positioned.fill(
-                          child: _buildCenterLabel(
-                            controller.centerLabel.value,
-                          ),
-                        ),
-                        if (trip.isCalculating.value)
-                          Positioned.fill(child: _buildLoadingOverlay()),
-                      ],
-                    );
-                  }),
-                  const Positioned(top: 12, left: 12, child: AppDrawerButton()),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Obx(() {
+              final origin = trip.originLatLng.value;
+              final destination = trip.destinationLatLng.value;
+              final route = trip.routePoints;
+
+              return MapPicker(
+                initialCenter: origin ?? controller.lastCenter,
+                initialZoom: route.length >= 2 ? 14.5 : 16,
+                path: route,
+                showPath: route.length >= 2,
+                userPosition: origin,
+                showUserMarker: origin != null,
+                destinationPosition: destination,
+                showDestinationMarker: destination != null,
+                showCrosshair: false,
+                showAttribution: false,
+                polylineColor: AppColors.brandGreen,
+                onChanged: (_, __, {required isFinal}) {},
+              );
+            }),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _roundBackButton(),
+                  const Spacer(),
                   if (reservationLabel != null)
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: _buildReservationBadge(reservationLabel),
-                    ),
+                    _reservationBadge(reservationLabel),
                 ],
               ),
             ),
-            const Expanded(flex: 4, child: TripPanel()),
-          ],
-        ),
+          ),
+          Positioned(
+            right: 10,
+            bottom: screenHeight * 0.39,
+            child: _attribution(),
+          ),
+          DraggableScrollableSheet(
+            initialChildSize: 0.38,
+            minChildSize: 0.30,
+            maxChildSize: 0.72,
+            snap: true,
+            builder: (context, scrollController) {
+              return TripPanel(
+                scrollController: scrollController,
+                isReservation: isReservation,
+                reservationLabel: reservationLabel,
+              );
+            },
+          ),
+        ],
       ),
     );
   }
