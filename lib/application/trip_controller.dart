@@ -10,6 +10,8 @@ import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:app_rtsg_client/data/services/mapbox_service.dart';
 import 'package:app_rtsg_client/data/services/trip_simulator_service.dart';
 
+enum TripCategory { normal, vip }
+
 class TripController extends GetxController {
   final MapboxGeocoder _geocoder;
   final GpsService _gps = Get.find<GpsService>();
@@ -226,6 +228,39 @@ class TripController extends GetxController {
   double perKm = 0.60;
   double perMin = 0.05;
 
+  // ---------------- CATEGORIA / OFERTA ----------------
+  final Rx<TripCategory> selectedCategory = TripCategory.normal.obs;
+  final RxDouble priceBoost = 0.0.obs;
+
+  // Temporal hasta recibir tarifas por categoria desde backend.
+  double vipMultiplier = 1.30;
+
+  static const List<double> priceBoostOptions = <double>[
+    0.0,
+    0.50,
+    1.00,
+    2.00,
+  ];
+
+  void selectCategory(TripCategory category) {
+    selectedCategory.value = category;
+  }
+
+  void setPriceBoost(double amount) {
+    if (amount < 0) return;
+    priceBoost.value = _roundMoney(amount);
+  }
+
+  double get normalFare => _roundMoney(estimatedFare.value);
+
+  double get vipFare => _roundMoney(estimatedFare.value * vipMultiplier);
+
+  double get categoryFare {
+    return selectedCategory.value == TripCategory.vip ? vipFare : normalFare;
+  }
+
+  double get finalFare => _roundMoney(categoryFare + priceBoost.value);
+
   Future<void> recalculateIfPossible() async {
     final origin = originLatLng.value;
     final dest = destinationLatLng.value;
@@ -262,8 +297,11 @@ class TripController extends GetxController {
   }
 
   double _calcFare(double km, int min) {
-    final fare = baseFare + (km * perKm) + (min * perMin);
-    return (fare * 100).roundToDouble() / 100.0;
+    return _roundMoney(baseFare + (km * perKm) + (min * perMin));
+  }
+
+  double _roundMoney(double value) {
+    return (value * 100).roundToDouble() / 100.0;
   }
 
   bool get canCreateTrip {
@@ -299,7 +337,7 @@ class TripController extends GetxController {
       destinationName: destinationAddress.value,
       distanceKm: distanceKm.value,
       durationMin: durationMin.value,
-      fare: estimatedFare.value,
+      fare: finalFare,
       status: TripStatus.creating,
     );
 
@@ -337,6 +375,9 @@ class TripController extends GetxController {
     durationMin.value = 0;
     routePoints.clear();
     estimatedFare.value = 0;
+
+    selectedCategory.value = TripCategory.normal;
+    priceBoost.value = 0;
 
     results.clear();
     isSearching.value = false;
