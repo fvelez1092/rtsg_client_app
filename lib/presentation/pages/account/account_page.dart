@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/global_memory.dart';
+import 'package:app_rtsg_client/presentation/pages/account/saved_addresses_page.dart';
 import 'package:app_rtsg_client/presentation/widgets/main_bottom_navigation.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
@@ -103,7 +104,7 @@ class AccountPage extends StatelessWidget {
               icon: Icons.location_on_outlined,
               title: 'Direcciones guardadas',
               subtitle: 'Casa, trabajo y lugares frecuentes',
-              onTap: () => _mockMessage('Direcciones guardadas'),
+              onTap: () => Get.to(() => const SavedAddressesPage()),
             ),
             _AccountOption(
               icon: Icons.shield_outlined,
