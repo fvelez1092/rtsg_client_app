@@ -41,14 +41,6 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   bool _isMapMoving = false;
   int _requestId = 0;
 
-  bool get _canConfirm {
-    final address = _address.trim();
-    return !_resolving &&
-        !_isMapMoving &&
-        address.isNotEmpty &&
-        address != 'Dirección no disponible';
-  }
-
   @override
   void initState() {
     super.initState();
@@ -87,7 +79,7 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   }
 
   Future<void> _confirm() async {
-    if (!_canConfirm) return;
+    if (_resolving || _isMapMoving || _address.trim().isEmpty) return;
 
     if (widget.saveAsUserAddress) {
       final label = _labelController.text.trim();
@@ -119,85 +111,94 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final keyboardInset = mediaQuery.viewInsets.bottom;
     final safeBottom = mediaQuery.padding.bottom;
+
+    // El selector normal no tiene campos de texto. No debe heredar el inset
+    // temporal del teclado de la pantalla anterior porque empuja la tarjeta
+    // fuera del viewport durante la transición.
+    final keyboardInset = widget.saveAsUserAddress
+        ? mediaQuery.viewInsets.bottom
+        : 0.0;
     final bottomInset = keyboardInset > 0
         ? keyboardInset + 12
         : safeBottom + 12;
     final maxCardHeight = mediaQuery.size.height *
-        (widget.saveAsUserAddress ? 0.50 : 0.38);
+        (widget.saveAsUserAddress ? 0.50 : 0.40);
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned.fill(
-            child: MapPicker(
-              initialCenter: _center,
-              initialZoom: widget.initialZoom,
-              polylineColor: AppColors.brandGreen,
-              onChanged: (center, zoom, {required isFinal}) {
-                _center = center;
+          MapPicker(
+            initialCenter: _center,
+            initialZoom: widget.initialZoom,
+            polylineColor: AppColors.brandGreen,
+            showAttribution: true,
+            onChanged: (center, zoom, {required isFinal}) {
+              _center = center;
 
-                if (isFinal) {
-                  if (mounted) {
-                    setState(() => _isMapMoving = false);
-                  }
-                  _resolve(center);
-                  return;
-                }
-
+              if (isFinal) {
                 if (mounted) {
-                  setState(() {
-                    _isMapMoving = true;
-                    _address = 'Buscando dirección…';
-                  });
+                  setState(() => _isMapMoving = false);
                 }
-              },
-            ),
+                _resolve(center);
+                return;
+              }
+
+              if (mounted) {
+                setState(() {
+                  _isMapMoving = true;
+                  _address = 'Buscando dirección…';
+                });
+              }
+            },
           ),
           SafeArea(
             bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                children: [
-                  _RoundButton(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () => Get.back(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.shadow,
-                            blurRadius: 12,
-                            offset: Offset(0, 5),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Row(
+                  children: [
+                    _RoundButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => Get.back(),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: AppColors.shadow,
+                              blurRadius: 12,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        widget.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -321,16 +322,14 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
                         ),
                       ),
                       if (widget.saveAsUserAddress) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         TextField(
                           controller: _labelController,
                           textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
                             hintText: 'Nombre: Casa, Trabajo…',
                             prefixIcon: const Icon(
                               Icons.bookmark_outline_rounded,
-                              color: AppColors.brandGreen,
                             ),
                             filled: true,
                             fillColor: AppColors.inputFill,
@@ -341,29 +340,36 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
-                        height: 52,
+                        height: 54,
                         child: FilledButton(
-                          onPressed: _canConfirm ? _confirm : null,
+                          onPressed: (_resolving || _isMapMoving)
+                              ? null
+                              : _confirm,
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.brandGreen,
                             foregroundColor: AppColors.surface,
-                            disabledBackgroundColor: AppColors.borderSoft,
-                            disabledForegroundColor: AppColors.textSecondary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: Text(
-                            _isMapMoving || _resolving
-                                ? 'Ubicando dirección…'
-                                : widget.confirmText,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                          child: (_resolving || _isMapMoving)
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.surface,
+                                  ),
+                                )
+                              : Text(
+                                  widget.confirmText,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
