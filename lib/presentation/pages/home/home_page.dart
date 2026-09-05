@@ -2,6 +2,8 @@ import 'package:app_rtsg_client/application/home_controller.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
 import 'package:app_rtsg_client/presentation/pages/home/components/partner_add_card.dart';
 import 'package:app_rtsg_client/presentation/pages/home/components/service_option_card.dart';
+import 'package:app_rtsg_client/presentation/widgets/main_bottom_navigation.dart';
+import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -46,7 +48,7 @@ class HomePage extends GetView<HomeController> {
           );
         }),
       ),
-      bottomNavigationBar: _buildBottomNavigation(context),
+      bottomNavigationBar: const MainBottomNavigation(currentIndex: 0),
     );
   }
 
@@ -65,7 +67,7 @@ class HomePage extends GetView<HomeController> {
                 Text(
                   'Buenos días',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurface.withOpacity(0.60),
+                    color: colors.onSurface.withValues(alpha: 0.60),
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -83,9 +85,7 @@ class HomePage extends GetView<HomeController> {
             color: colors.primary,
             shape: const CircleBorder(),
             child: InkWell(
-              onTap: () {
-                // Get.toNamed(AppRoutes.profile);
-              },
+              onTap: () => Get.offNamed(AppRoutes.ACCOUNT),
               customBorder: const CircleBorder(),
               child: SizedBox(
                 width: 48,
@@ -113,18 +113,18 @@ class HomePage extends GetView<HomeController> {
         borderRadius: BorderRadius.circular(18),
         elevation: 0,
         child: InkWell(
-          onTap: () {
-            // Get.toNamed(AppRoutes.locationSearch);
-          },
+          onTap: () => Get.toNamed(AppRoutes.TRIP),
           borderRadius: BorderRadius.circular(18),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 17),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.onSurface.withOpacity(0.10)),
+              border: Border.all(
+                color: colors.onSurface.withValues(alpha: 0.10),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: colors.scrim.withOpacity(0.05),
+                  color: colors.scrim.withValues(alpha: 0.05),
                   blurRadius: 12,
                   offset: const Offset(0, 5),
                 ),
@@ -136,7 +136,7 @@ class HomePage extends GetView<HomeController> {
                   width: 43,
                   height: 43,
                   decoration: BoxDecoration(
-                    color: colors.primary.withOpacity(0.13),
+                    color: colors.primary.withValues(alpha: 0.13),
                     borderRadius: BorderRadius.circular(13),
                   ),
                   child: Icon(
@@ -158,7 +158,7 @@ class HomePage extends GetView<HomeController> {
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 15,
-                  color: colors.onSurface.withOpacity(0.50),
+                  color: colors.onSurface.withValues(alpha: 0.50),
                 ),
               ],
             ),
@@ -182,31 +182,22 @@ class HomePage extends GetView<HomeController> {
           ServiceOptionCard(
             title: 'Viaje',
             icon: Icons.directions_car_filled_rounded,
-            isHighlighted: true,
-            onTap: () {
-              // Get.toNamed(AppRoutes.trip);
-            },
+            onTap: () => Get.toNamed(AppRoutes.TRIP),
           ),
           ServiceOptionCard(
             title: 'Reserva',
             icon: Icons.calendar_month_rounded,
-            onTap: () {
-              // Get.toNamed(AppRoutes.reservation);
-            },
+            onTap: () => Get.toNamed(AppRoutes.RESERVATION),
           ),
           ServiceOptionCard(
             title: 'Envíos',
             icon: Icons.inventory_2_outlined,
-            onTap: () {
-              // Get.toNamed(AppRoutes.delivery);
-            },
+            onTap: () => Get.toNamed(AppRoutes.DELIVERY),
           ),
           ServiceOptionCard(
             title: 'Partners',
             icon: Icons.storefront_outlined,
-            onTap: () {
-              // Get.toNamed(AppRoutes.partners);
-            },
+            onTap: () => Get.toNamed(AppRoutes.PARTNERS),
           ),
         ],
       ),
@@ -234,7 +225,7 @@ class HomePage extends GetView<HomeController> {
                   width: 37,
                   height: 37,
                   decoration: BoxDecoration(
-                    color: colors.tertiary.withOpacity(0.22),
+                    color: colors.tertiary.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: Icon(
@@ -268,9 +259,10 @@ class HomePage extends GetView<HomeController> {
 
                 return PartnerAdCard(
                   advertisement: advertisement,
-                  onTap: () {
-                    // Abrir detalle, WebView o enlace externo.
-                  },
+                  onTap: () => Get.toNamed(
+                    AppRoutes.PARTNER_DETAIL,
+                    arguments: advertisement,
+                  ),
                 );
               },
             ),
@@ -293,7 +285,7 @@ class HomePage extends GetView<HomeController> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? colors.primary
-                        : colors.onSurface.withOpacity(0.18),
+                        : colors.onSurface.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
                 );
@@ -331,9 +323,7 @@ class HomePage extends GetView<HomeController> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {
-                    // Get.toNamed(AppRoutes.partners);
-                  },
+                  onPressed: () => Get.toNamed(AppRoutes.PARTNERS),
                   child: const Text('Ver todos'),
                 ),
               ],
@@ -346,20 +336,16 @@ class HomePage extends GetView<HomeController> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               scrollDirection: Axis.horizontal,
               itemCount: controller.partners.length,
-              separatorBuilder: (_, __) {
-                return const SizedBox(width: 12);
-              },
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final partner = controller.partners[index];
 
                 return _PartnerCard(
                   partner: partner,
-                  onTap: () {
-                    // Get.toNamed(
-                    //   AppRoutes.partnerDetail,
-                    //   arguments: partner,
-                    // );
-                  },
+                  onTap: () => Get.toNamed(
+                    AppRoutes.PARTNER_DETAIL,
+                    arguments: partner,
+                  ),
                 );
               },
             ),
@@ -378,65 +364,86 @@ class HomePage extends GetView<HomeController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Actividad reciente',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: colors.onSurface,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Actividad reciente',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Get.offNamed(AppRoutes.ACTIVITY),
+                child: const Text('Ver historial'),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Material(
             color: colors.surface,
             borderRadius: BorderRadius.circular(20),
             child: InkWell(
-              onTap: () {
-                // Get.toNamed(AppRoutes.activity);
-              },
+              onTap: () => Get.offNamed(AppRoutes.ACTIVITY),
               borderRadius: BorderRadius.circular(20),
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: colors.onSurface.withOpacity(0.10)),
+                  border: Border.all(
+                    color: colors.onSurface.withValues(alpha: 0.10),
+                  ),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Container(
-                      width: 53,
-                      height: 53,
-                      decoration: BoxDecoration(
-                        color: colors.primary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Icon(Icons.history_rounded, color: colors.primary),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Todavía no tienes viajes recientes',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colors.onSurface,
-                              fontWeight: FontWeight.w700,
-                            ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Tus últimos servicios aparecerán aquí.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.onSurface.withOpacity(0.58),
-                            ),
+                          child: Icon(
+                            Icons.directions_car_rounded,
+                            color: colors.primary,
                           ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 14,
-                      color: colors.onSurface.withOpacity(0.45),
+                        ),
+                        const SizedBox(width: 13),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'La Carolina → Centro Histórico',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Hoy · 09:42 · 6.8 km',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Text(
+                          r'$4.80',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -444,81 +451,6 @@ class HomePage extends GetView<HomeController> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigation(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Obx(
-      () => NavigationBarTheme(
-        data: NavigationBarThemeData(
-          backgroundColor: colors.surface,
-          indicatorColor: colors.primary.withOpacity(0.16),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            final selected = states.contains(WidgetState.selected);
-
-            return theme.textTheme.labelSmall?.copyWith(
-              color: selected
-                  ? colors.primary
-                  : colors.onSurface.withOpacity(0.60),
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            );
-          }),
-          iconTheme: WidgetStateProperty.resolveWith((states) {
-            final selected = states.contains(WidgetState.selected);
-
-            return IconThemeData(
-              color: selected
-                  ? colors.primary
-                  : colors.onSurface.withOpacity(0.60),
-            );
-          }),
-        ),
-        child: NavigationBar(
-          selectedIndex: controller.selectedBottomIndex.value,
-          onDestinationSelected: (index) {
-            controller.changeBottomIndex(index);
-
-            switch (index) {
-              case 0:
-                break;
-              case 1:
-                // Get.toNamed(AppRoutes.activity);
-                break;
-              case 2:
-                // Get.toNamed(AppRoutes.wallet);
-                break;
-              case 3:
-                // Get.toNamed(AppRoutes.profile);
-                break;
-            }
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Inicio',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long_rounded),
-              label: 'Actividad',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.account_balance_wallet_outlined),
-              selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-              label: 'Billetera',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: 'Cuenta',
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -548,9 +480,11 @@ class _PartnerCard extends StatelessWidget {
               Container(
                 height: 115,
                 decoration: BoxDecoration(
-                  color: colors.primary.withOpacity(0.12),
+                  color: colors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: colors.onSurface.withOpacity(0.08)),
+                  border: Border.all(
+                    color: colors.onSurface.withValues(alpha: 0.08),
+                  ),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Image.network(
@@ -588,7 +522,7 @@ class _PartnerCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.onSurface.withOpacity(0.58),
+                        color: colors.onSurface.withValues(alpha: 0.58),
                       ),
                     ),
                   ),
@@ -631,7 +565,7 @@ class _HomeError extends StatelessWidget {
               width: 75,
               height: 75,
               decoration: BoxDecoration(
-                color: colors.secondary.withOpacity(0.12),
+                color: colors.secondary.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -654,14 +588,12 @@ class _HomeError extends StatelessWidget {
               'Verifica tu conexión e inténtalo nuevamente.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurface.withOpacity(0.60),
+                color: colors.onSurface.withValues(alpha: 0.60),
               ),
             ),
             const SizedBox(height: 21),
             FilledButton.icon(
-              onPressed: () {
-                onRetry();
-              },
+              onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Reintentar'),
             ),
