@@ -32,20 +32,6 @@ class TripPanel extends GetView<TripController> {
     );
   }
 
-  String _statusText(TripStatus status) {
-    return switch (status) {
-      TripStatus.creating => 'Preparando tu solicitud…',
-      TripStatus.searching => 'Buscando un conductor cerca de ti…',
-      TripStatus.accepted => 'Conductor asignado',
-      TripStatus.arrived => 'Tu conductor llegó al punto de partida',
-      TripStatus.started => 'Viaje en curso',
-      TripStatus.completed => 'Viaje finalizado',
-      TripStatus.cancelled => 'Viaje cancelado',
-      TripStatus.failed => 'No pudimos crear el viaje',
-      _ => '',
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -63,407 +49,274 @@ class TripPanel extends GetView<TripController> {
           ),
         ],
       ),
-      child: ListView(
-        controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
-        children: [
-          Center(
-            child: Container(
-              width: 44,
-              height: 5,
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(
-                color: AppColors.borderSoft,
-                borderRadius: BorderRadius.circular(99),
+      child: Obx(() {
+        final hasDestination = controller.destinationLatLng.value != null;
+        final calculating = controller.isCalculating.value;
+        final hasRoute =
+            controller.distanceKm.value > 0 && controller.durationMin.value > 0;
+
+        return ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 30),
+          children: [
+            const _Handle(),
+            if (!hasDestination)
+              _SearchContent(
+                isReservation: isReservation,
+                reservationLabel: reservationLabel,
+                onOpenLocation: _openLocation,
+              )
+            else if (calculating || !hasRoute)
+              _CalculatingContent(onChange: () => _openLocation(RouteSelectMode.destination))
+            else
+              _ConfirmationContent(
+                isReservation: isReservation,
+                reservationLabel: reservationLabel,
               ),
-            ),
-          ),
-          _Header(
-            isReservation: isReservation,
-            reservationLabel: reservationLabel,
-            onReset: controller.resetTrip,
-          ),
-          const SizedBox(height: 16),
-          _RouteInputs(onOpen: _openLocation),
-          Obx(() {
-            final calculating = controller.isCalculating.value;
-            final hasRoute =
-                controller.distanceKm.value > 0 &&
-                controller.durationMin.value > 0;
+          ],
+        );
+      }),
+    );
+  }
+}
 
-            if (!calculating && !hasRoute) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: _HintCard(
-                  onTap: () => _openLocation(RouteSelectMode.destination),
-                ),
-              );
-            }
+class _Handle extends StatelessWidget {
+  const _Handle();
 
-            if (calculating) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.brandGreen,
-                      ),
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Calculando la mejor ruta…',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return const _RideConfiguration();
-          }),
-          Obx(() {
-            final status = controller.status.value;
-            if (status == TripStatus.idle) return const SizedBox.shrink();
-
-            return Container(
-              margin: const EdgeInsets.only(top: 14),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.brandGreen.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.brandGreen.withValues(alpha: 0.20),
-                ),
-              ),
-              child: Row(
-                children: [
-                  if (status == TripStatus.searching ||
-                      status == TripStatus.creating)
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.brandGreen,
-                      ),
-                    )
-                  else
-                    const Icon(
-                      Icons.local_taxi_rounded,
-                      color: AppColors.brandGreen,
-                    ),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Text(
-                      _statusText(status),
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (status == TripStatus.searching ||
-                      status == TripStatus.accepted)
-                    TextButton(
-                      onPressed: controller.cancelTrip,
-                      child: const Text('Cancelar'),
-                    ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 16),
-          Obx(() {
-            final status = controller.status.value;
-            if (status != TripStatus.idle) return const SizedBox.shrink();
-
-            final enabled = controller.canCreateTrip;
-            final hasRoute = controller.distanceKm.value > 0;
-
-            return SizedBox(
-              width: double.infinity,
-              height: 58,
-              child: FilledButton(
-                onPressed: enabled ? controller.createTrip : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.brandGreen,
-                  foregroundColor: AppColors.surface,
-                  disabledBackgroundColor: AppColors.borderSoft,
-                  disabledForegroundColor: AppColors.textSecondary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                child: Text(
-                  hasRoute
-                      ? '${isReservation ? 'Programar' : 'Solicitar'}  •  \$${controller.finalFare.toStringAsFixed(2)}'
-                      : (isReservation ? 'Programar viaje' : 'Solicitar viaje'),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            );
-          }),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 44,
+        height: 5,
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: AppColors.borderSoft,
+          borderRadius: BorderRadius.circular(99),
+        ),
       ),
     );
   }
 }
 
-class _Header extends GetView<TripController> {
+class _SearchContent extends StatelessWidget {
   final bool isReservation;
   final String? reservationLabel;
-  final VoidCallback onReset;
+  final void Function(RouteSelectMode mode) onOpenLocation;
 
-  const _Header({
+  const _SearchContent({
     required this.isReservation,
     required this.reservationLabel,
-    required this.onReset,
+    required this.onOpenLocation,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isReservation ? 'Programa tu viaje' : '¿A dónde vamos?',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                isReservation && reservationLabel != null
-                    ? reservationLabel!
-                    : 'Selecciona tu origen y destino',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Obx(() {
-          final hasRoute =
-              controller.destinationLatLng.value != null ||
-              controller.destinationAddress.value.trim().isNotEmpty;
-
-          if (!hasRoute) return const SizedBox.shrink();
-
-          return IconButton.filledTonal(
-            tooltip: 'Limpiar ruta',
-            onPressed: onReset,
-            icon: const Icon(Icons.close_rounded),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _RouteInputs extends GetView<TripController> {
-  final void Function(RouteSelectMode mode) onOpen;
-
-  const _RouteInputs({required this.onOpen});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderSoft),
-      ),
-      child: Column(
-        children: [
-          Obx(
-            () => _LocationRow(
-              dotColor: AppColors.brandGreen,
-              icon: Icons.my_location_rounded,
-              label: 'Punto de partida',
-              value: controller.originAddress.value.isEmpty
-                  ? 'Usar mi ubicación'
-                  : controller.originAddress.value,
-              onTap: () => onOpen(RouteSelectMode.origin),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 54),
-            child: Divider(height: 1, color: AppColors.borderSoft),
-          ),
-          Obx(
-            () => _LocationRow(
-              dotColor: AppColors.brandRed,
-              icon: Icons.location_on_rounded,
-              label: 'Destino',
-              value: controller.destinationAddress.value.isEmpty
-                  ? '¿A dónde vas?'
-                  : controller.destinationAddress.value,
-              emphasize: controller.destinationAddress.value.isEmpty,
-              onTap: () => onOpen(RouteSelectMode.destination),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RideConfiguration extends GetView<TripController> {
-  const _RideConfiguration();
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          isReservation ? 'Programa tu viaje' : '¿A dónde vamos?',
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 21,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          isReservation && reservationLabel != null
+              ? reservationLabel!
+              : 'Selecciona tu origen y destino',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+          ),
+        ),
         const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderSoft),
+        _RouteInputs(onOpen: onOpenLocation),
+        const SizedBox(height: 14),
+        _HintCard(onTap: () => onOpenLocation(RouteSelectMode.destination)),
+      ],
+    );
+  }
+}
+
+class _CalculatingContent extends StatelessWidget {
+  final VoidCallback onChange;
+
+  const _CalculatingContent({required this.onChange});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        children: [
+          const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppColors.brandGreen,
+            ),
           ),
-          child: Row(
-            children: [
-              _Metric(
-                icon: Icons.route_rounded,
-                value: '${controller.distanceKm.value.toStringAsFixed(1)} km',
-                label: 'Distancia',
-              ),
-              Container(width: 1, height: 34, color: AppColors.borderSoft),
-              _Metric(
-                icon: Icons.schedule_rounded,
-                value: '${controller.durationMin.value} min',
-                label: 'Trayecto',
-              ),
-            ],
+          const SizedBox(height: 12),
+          const Text(
+            'Calculando la mejor ruta…',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
+          const SizedBox(height: 4),
+          const Text(
+            'Estamos preparando las opciones disponibles para tu viaje.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: onChange,
+            child: const Text('Cambiar destino'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfirmationContent extends GetView<TripController> {
+  final bool isReservation;
+  final String? reservationLabel;
+
+  const _ConfirmationContent({
+    required this.isReservation,
+    required this.reservationLabel,
+  });
+
+  String _statusText(TripStatus status) {
+    return switch (status) {
+      TripStatus.creating => 'Preparando tu solicitud…',
+      TripStatus.searching => 'Buscando un conductor cerca de ti…',
+      TripStatus.accepted => 'Conductor asignado',
+      TripStatus.arrived => 'Tu conductor llegó al punto de partida',
+      TripStatus.started => 'Viaje en curso',
+      TripStatus.completed => 'Viaje finalizado',
+      TripStatus.cancelled => 'Viaje cancelado',
+      TripStatus.failed => 'No pudimos crear el viaje',
+      _ => '',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = controller.status.value;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isReservation ? 'Confirma tu reserva' : 'Elige cómo viajar',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    isReservation && reservationLabel != null
+                        ? reservationLabel!
+                        : 'Selecciona una categoría y confirma tu viaje.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        _TripMetrics(
+          distanceKm: controller.distanceKm.value,
+          durationMin: controller.durationMin.value,
         ),
         const SizedBox(height: 20),
         const _SectionTitle(
           title: 'Elige tu servicio',
-          subtitle: 'Selecciona la categoría que prefieras para este viaje.',
+          subtitle: 'Tenemos dos categorías disponibles para este viaje.',
         ),
         const SizedBox(height: 10),
-        Obx(
-          () => _CategoryCard(
-            category: TripCategory.normal,
-            title: 'Normal',
-            subtitle: 'Servicio RTSG para tu viaje diario',
-            icon: Icons.local_taxi_rounded,
-            fare: controller.normalFare,
-            selected: controller.selectedCategory.value == TripCategory.normal,
-            onTap: () => controller.selectCategory(TripCategory.normal),
-          ),
+        _CategoryCard(
+          category: TripCategory.normal,
+          title: 'Normal',
+          subtitle: 'Servicio RTSG para tu viaje diario',
+          icon: Icons.local_taxi_rounded,
+          fare: controller.normalFare,
+          selected: controller.selectedCategory.value == TripCategory.normal,
+          onTap: () => controller.selectCategory(TripCategory.normal),
         ),
         const SizedBox(height: 9),
-        Obx(
-          () => _CategoryCard(
-            category: TripCategory.vip,
-            title: 'VIP / Ejecutivo',
-            subtitle: 'Mayor comodidad y atención preferente',
-            icon: Icons.workspace_premium_rounded,
-            fare: controller.vipFare,
-            selected: controller.selectedCategory.value == TripCategory.vip,
-            onTap: () => controller.selectCategory(TripCategory.vip),
-          ),
+        _CategoryCard(
+          category: TripCategory.vip,
+          title: 'VIP / Ejecutivo',
+          subtitle: 'Mayor comodidad y atención preferente',
+          icon: Icons.workspace_premium_rounded,
+          fare: controller.vipFare,
+          selected: controller.selectedCategory.value == TripCategory.vip,
+          onTap: () => controller.selectCategory(TripCategory.vip),
         ),
         const SizedBox(height: 20),
         const _SectionTitle(
           title: 'Mejora tu oferta',
           subtitle:
-              'Si hay alta demanda, puedes aumentar el valor para facilitar que una unidad acepte el viaje.',
+              'En momentos de alta demanda puedes aumentar el valor para facilitar que una unidad acepte.',
         ),
         const SizedBox(height: 10),
-        Obx(() {
-          final selected = controller.priceBoost.value;
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: TripController.priceBoostOptions.map((amount) {
+            final active = controller.priceBoost.value == amount;
+            final label = amount == 0
+                ? 'Sin extra'
+                : '+\$${amount.toStringAsFixed(2)}';
 
-          return Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: TripController.priceBoostOptions.map((amount) {
-              final active = selected == amount;
-              final label = amount == 0
-                  ? 'Sin extra'
-                  : '+\$${amount.toStringAsFixed(2)}';
-
-              return ChoiceChip(
-                selected: active,
-                onSelected: (_) => controller.setPriceBoost(amount),
-                label: Text(label),
-                selectedColor: AppColors.brandGreen.withValues(alpha: 0.12),
-                backgroundColor: AppColors.surface,
-                side: BorderSide(
-                  color: active ? AppColors.brandGreen : AppColors.borderSoft,
-                ),
-                labelStyle: TextStyle(
-                  color: active
-                      ? AppColors.brandGreen
-                      : AppColors.textPrimary,
-                  fontWeight: FontWeight.w800,
-                ),
-              );
-            }).toList(),
-          );
-        }),
-        const SizedBox(height: 10),
-        Obx(
-          () => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.inputFill,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.sell_outlined,
-                  size: 20,
-                  color: AppColors.brandGreen,
-                ),
-                const SizedBox(width: 9),
-                const Expanded(
-                  child: Text(
-                    'Oferta total del viaje',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  '\$${controller.finalFare.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
+            return ChoiceChip(
+              selected: active,
+              onSelected: (_) => controller.setPriceBoost(amount),
+              label: Text(label),
+              selectedColor: AppColors.brandGreen.withValues(alpha: 0.12),
+              backgroundColor: AppColors.surface,
+              side: BorderSide(
+                color: active ? AppColors.brandGreen : AppColors.borderSoft,
+              ),
+              labelStyle: TextStyle(
+                color: active ? AppColors.brandGreen : AppColors.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
+            );
+          }).toList(),
         ),
+        const SizedBox(height: 10),
+        _TotalOffer(total: controller.finalFare),
         const SizedBox(height: 20),
         const _SectionTitle(
           title: 'Método de pago',
@@ -490,7 +343,164 @@ class _RideConfiguration extends GetView<TripController> {
           subtitle: 'Próximamente',
           enabled: false,
         ),
+        if (status != TripStatus.idle) ...[
+          const SizedBox(height: 14),
+          _StatusCard(
+            status: status,
+            text: _statusText(status),
+            onCancel: (status == TripStatus.searching ||
+                    status == TripStatus.accepted)
+                ? controller.cancelTrip
+                : null,
+          ),
+        ],
+        const SizedBox(height: 18),
+        if (status == TripStatus.idle)
+          SizedBox(
+            width: double.infinity,
+            height: 58,
+            child: FilledButton(
+              onPressed: controller.canCreateTrip ? controller.createTrip : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.brandGreen,
+                foregroundColor: AppColors.surface,
+                disabledBackgroundColor: AppColors.borderSoft,
+                disabledForegroundColor: AppColors.textSecondary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: Text(
+                '${isReservation ? 'Programar' : 'Solicitar'}  •  \$${controller.finalFare.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+class _RouteInputs extends GetView<TripController> {
+  final void Function(RouteSelectMode mode) onOpen;
+
+  const _RouteInputs({required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.inputFill,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Column(
+        children: [
+          _LocationRow(
+            dotColor: AppColors.brandGreen,
+            icon: Icons.my_location_rounded,
+            label: 'Punto de partida',
+            value: controller.originAddress.value.isEmpty
+                ? 'Usar mi ubicación'
+                : controller.originAddress.value,
+            onTap: () => onOpen(RouteSelectMode.origin),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 54),
+            child: Divider(height: 1, color: AppColors.borderSoft),
+          ),
+          _LocationRow(
+            dotColor: AppColors.brandRed,
+            icon: Icons.location_on_rounded,
+            label: 'Destino',
+            value: controller.destinationAddress.value.isEmpty
+                ? '¿A dónde vas?'
+                : controller.destinationAddress.value,
+            emphasize: controller.destinationAddress.value.isEmpty,
+            onTap: () => onOpen(RouteSelectMode.destination),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TripMetrics extends StatelessWidget {
+  final double distanceKm;
+  final int durationMin;
+
+  const _TripMetrics({required this.distanceKm, required this.durationMin});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.inputFill,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          _Metric(
+            icon: Icons.route_rounded,
+            value: '${distanceKm.toStringAsFixed(1)} km',
+            label: 'Distancia',
+          ),
+          Container(width: 1, height: 34, color: AppColors.borderSoft),
+          _Metric(
+            icon: Icons.schedule_rounded,
+            value: '$durationMin min',
+            label: 'Trayecto',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TotalOffer extends StatelessWidget {
+  final double total;
+
+  const _TotalOffer({required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.inputFill,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.sell_outlined,
+            size: 20,
+            color: AppColors.brandGreen,
+          ),
+          const SizedBox(width: 9),
+          const Expanded(
+            child: Text(
+              'Oferta total del viaje',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            '\$${total.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -730,6 +740,68 @@ class _PaymentMethodCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  final TripStatus status;
+  final String text;
+  final VoidCallback? onCancel;
+
+  const _StatusCard({
+    required this.status,
+    required this.text,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final loading =
+        status == TripStatus.searching || status == TripStatus.creating;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.brandGreen.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.brandGreen.withValues(alpha: 0.20),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (loading)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.brandGreen,
+              ),
+            )
+          else
+            const Icon(
+              Icons.local_taxi_rounded,
+              color: AppColors.brandGreen,
+            ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          if (onCancel != null)
+            TextButton(
+              onPressed: onCancel,
+              child: const Text('Cancelar'),
             ),
         ],
       ),
