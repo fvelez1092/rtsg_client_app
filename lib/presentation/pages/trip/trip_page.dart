@@ -19,8 +19,9 @@ class TripPage extends StatefulWidget {
 class _TripPageState extends State<TripPage> {
   TripController get controller => Get.find<TripController>();
 
-  // Solo controla la presentación. La lógica del viaje sigue en TripController.
-  double _routeSheetExtent = 0.42;
+  // Estado visual del panel de confirmación. La lógica del viaje vive en
+  // TripController.
+  double _routeSheetExtent = 0.60;
 
   bool _onRouteSheetNotification(DraggableScrollableNotification notification) {
     final next = notification.extent;
@@ -313,20 +314,26 @@ class _TripPageState extends State<TripPage> {
               final route = controller.routePoints;
               final hasRoute = route.length >= 2;
               final isPickingOrigin =
-                  destination == null && controller.status.value == TripStatus.idle;
+                  destination == null &&
+                  controller.status.value == TripStatus.idle;
 
               final mapCenter = hasRoute
                   ? route[route.length ~/ 2]
                   : (origin ?? controller.lastCenter);
 
-              // Hasta 62% del alto del panel el mapa sigue reajustándose.
-              // A partir de ahí mantenemos un límite para no alejar demasiado la ruta.
-              final fitSheetExtent = _routeSheetExtent.clamp(0.34, 0.62);
+              // El panel tapa parte del mapa, pero no usamos todo ese porcentaje
+              // como padding porque haría la ruta demasiado pequeña. El padding
+              // crece progresivamente al expandir el panel y se limita al 48%.
+              final actualExtent = _routeSheetExtent.clamp(0.42, 0.80);
+              final progress =
+                  ((actualExtent - 0.42) / (0.80 - 0.42)).clamp(0.0, 1.0);
+              final cameraBottomExtent = 0.34 + (progress * 0.14);
+
               final fitPadding = EdgeInsets.fromLTRB(
-                34,
-                hasRoute ? 118 : 28,
-                34,
-                hasRoute ? (screenHeight * fitSheetExtent) + 20 : 28,
+                30,
+                hasRoute ? 106 : 28,
+                30,
+                hasRoute ? (screenHeight * cameraBottomExtent) + 14 : 28,
               );
 
               final fitPoints = hasRoute
@@ -335,7 +342,7 @@ class _TripPageState extends State<TripPage> {
 
               return MapPicker(
                 initialCenter: mapCenter,
-                initialZoom: hasRoute ? 14.8 : 16,
+                initialZoom: hasRoute ? 15.0 : 16,
                 path: route,
                 showPath: hasRoute,
                 userPosition: origin,
@@ -347,8 +354,8 @@ class _TripPageState extends State<TripPage> {
                 autoFit: hasRoute,
                 fitPoints: fitPoints,
                 fitPadding: fitPadding,
-                fitMinZoom: 11.5,
-                fitMaxZoom: 16.2,
+                fitMinZoom: 12.8,
+                fitMaxZoom: 16.3,
                 polylineColor: AppColors.brandGreen,
                 onChanged: (center, zoom, {required isFinal}) {
                   if (!isPickingOrigin) return;
@@ -361,7 +368,6 @@ class _TripPageState extends State<TripPage> {
               );
             }),
           ),
-
           Positioned(
             top: 0,
             left: 0,
@@ -398,14 +404,12 @@ class _TripPageState extends State<TripPage> {
               ),
             ),
           ),
-
           Positioned(
             top: 88,
             left: 0,
             right: 0,
             child: Center(child: _originPickerCard()),
           ),
-
           Obx(() {
             final hasRoute =
                 controller.destinationLatLng.value != null &&
@@ -419,7 +423,6 @@ class _TripPageState extends State<TripPage> {
               child: _attribution(),
             );
           }),
-
           Obx(() {
             final hasRoute =
                 controller.destinationLatLng.value != null &&
@@ -428,12 +431,12 @@ class _TripPageState extends State<TripPage> {
 
             final sheet = DraggableScrollableSheet(
               key: ValueKey(hasRoute),
-              initialChildSize: hasRoute ? 0.42 : 0.32,
-              minChildSize: hasRoute ? 0.34 : 0.26,
-              maxChildSize: hasRoute ? 0.78 : 0.50,
+              initialChildSize: hasRoute ? 0.60 : 0.32,
+              minChildSize: hasRoute ? 0.42 : 0.26,
+              maxChildSize: hasRoute ? 0.80 : 0.50,
               snap: true,
               snapSizes: hasRoute
-                  ? const [0.42, 0.60, 0.78]
+                  ? const [0.42, 0.60, 0.80]
                   : const [0.32, 0.50],
               builder: (context, scrollController) {
                 return TripPanel(
