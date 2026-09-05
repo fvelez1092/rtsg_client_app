@@ -6,25 +6,19 @@ class ServiceOptionCard extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.onTap,
-    this.isHighlighted = false,
   });
 
   final String title;
   final IconData icon;
   final VoidCallback onTap;
-  final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    final backgroundColor = isHighlighted ? colors.primary : colors.surface;
-
-    final foregroundColor = isHighlighted ? colors.onPrimary : colors.onSurface;
-
     return Material(
-      color: backgroundColor,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -34,24 +28,21 @@ class ServiceOptionCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: isHighlighted
-                  ? Colors.transparent
-                  : colors.onSurface.withOpacity(0.10),
+              color: colors.onSurface.withValues(alpha: 0.10),
             ),
-            boxShadow: isHighlighted
-                ? [
-                    BoxShadow(
-                      color: colors.primary.withOpacity(0.20),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 29, color: foregroundColor),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(icon, size: 25, color: colors.primary),
+              ),
               const SizedBox(height: 9),
               Text(
                 title,
@@ -59,7 +50,7 @@ class ServiceOptionCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelLarge?.copyWith(
-                  color: foregroundColor,
+                  color: colors.onSurface,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
