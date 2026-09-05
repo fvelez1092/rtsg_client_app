@@ -126,16 +126,16 @@ class DashboardPage extends GetView<DashboardController> {
     return Obx(() {
       final navigationVisible = controller.isNavigationVisible.value;
 
-      // Incluso colapsada dejamos espacio para el botón circular flotante.
+      // La barra completa reserva espacio para no tapar el contenido. Cuando se
+      // colapsa, el botón circular flota sobre la esquina izquierda y solo
+      // conservamos el safe area real del dispositivo para evitar una franja
+      // vacía en todo el ancho de la pantalla.
       final contentBottomInset = navigationVisible
           ? _navigationHeight +
                 _navigationBottomGap +
                 bottomSafeArea +
                 _contentGap
-          : _collapsedSize +
-                _navigationBottomGap +
-                bottomSafeArea +
-                4;
+          : bottomSafeArea + 6;
 
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
