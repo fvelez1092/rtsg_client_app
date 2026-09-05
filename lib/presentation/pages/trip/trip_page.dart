@@ -19,7 +19,6 @@ class TripPage extends StatefulWidget {
 class _TripPageState extends State<TripPage> {
   TripController get controller => Get.find<TripController>();
 
-  // Solo controla presentación. La lógica del viaje permanece en TripController.
   double _routeSheetExtent = 0.55;
   double _searchSheetExtent = 0.32;
 
@@ -106,7 +105,6 @@ class _TripPageState extends State<TripPage> {
           ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
@@ -147,16 +145,17 @@ class _TripPageState extends State<TripPage> {
 
   Widget _reservationBadge(String label) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 245),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface.withValues(alpha: 0.97),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderSoft),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,
-            blurRadius: 12,
-            offset: Offset(0, 5),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -164,39 +163,40 @@ class _TripPageState extends State<TripPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: AppColors.brandGreen.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(9),
             ),
             child: const Icon(
               Icons.event_available_rounded,
-              size: 19,
+              size: 17,
               color: AppColors.brandGreen,
             ),
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 8),
           Flexible(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Viaje programado',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 10,
+                    fontSize: 9,
                   ),
                 ),
               ],
@@ -236,31 +236,32 @@ class _TripPageState extends State<TripPage> {
       final address = controller.centerLabel.value;
 
       return Container(
-        constraints: const BoxConstraints(maxWidth: 310),
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        constraints: const BoxConstraints(maxWidth: 292),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.surface.withValues(alpha: 0.96),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.borderSoft),
           boxShadow: const [
             BoxShadow(
               color: AppColors.shadow,
-              blurRadius: 14,
-              offset: Offset(0, 6),
+              blurRadius: 11,
+              offset: Offset(0, 5),
             ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: AppColors.brandGreen.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: resolving
                   ? const Padding(
-                      padding: EdgeInsets.all(10),
+                      padding: EdgeInsets.all(9),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: AppColors.brandGreen,
@@ -268,41 +269,42 @@ class _TripPageState extends State<TripPage> {
                     )
                   : const Icon(
                       Icons.my_location_rounded,
-                      size: 20,
+                      size: 18,
                       color: AppColors.brandGreen,
                     ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 9),
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Punto de partida',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   Text(
                     address,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      height: 1.2,
+                      height: 1.15,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   const Text(
                     'Mueve el mapa para ajustar la ubicación',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 10,
+                      fontSize: 9,
                     ),
                   ),
                 ],
@@ -328,9 +330,6 @@ class _TripPageState extends State<TripPage> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Antes de escoger destino, el mapa ocupa solo el área realmente
-          // visible sobre el panel. Al arrastrar el panel cambia su altura y el
-          // mapa se redimensiona manteniendo el origen en el centro visible.
           Obx(() {
             final origin = controller.originLatLng.value;
             final destination = controller.destinationLatLng.value;
@@ -398,6 +397,7 @@ class _TripPageState extends State<TripPage> {
             );
           }),
 
+          // Navegación superior. Con ruta se muestra también el resumen.
           Positioned(
             top: 0,
             left: 0,
@@ -405,7 +405,7 @@ class _TripPageState extends State<TripPage> {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
                 child: Obx(() {
                   final hasDestination =
                       controller.destinationLatLng.value != null;
@@ -421,25 +421,51 @@ class _TripPageState extends State<TripPage> {
                     );
                   }
 
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _roundBackButton(),
-                      const Spacer(),
-                      if (reservationLabel != null)
-                        _reservationBadge(reservationLabel),
-                    ],
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: _roundBackButton(),
                   );
                 }),
               ),
             ),
           ),
 
+          // Reserva centrada, separada del botón atrás y del origen.
+          if (reservationLabel != null)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Obx(() {
+                  final hasDestination =
+                      controller.destinationLatLng.value != null;
+                  if (hasDestination) return const SizedBox.shrink();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Center(child: _reservationBadge(reservationLabel)),
+                  );
+                }),
+              ),
+            ),
+
+          // Origen debajo del badge de reserva. Si no es reserva, queda un poco
+          // más arriba sin competir con el botón de volver.
           Positioned(
-            top: 88,
+            top: 0,
             left: 0,
             right: 0,
-            child: Center(child: _originPickerCard()),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: reservationLabel != null ? 62 : 58,
+                ),
+                child: Center(child: _originPickerCard()),
+              ),
+            ),
           ),
 
           Obx(() {
@@ -472,8 +498,6 @@ class _TripPageState extends State<TripPage> {
                   ? const [0.40, 0.55, 0.70]
                   : const [0.26, 0.32, 0.50],
               builder: (context, scrollController) {
-                // Estas lecturas mantienen sincronizados textos y precios que
-                // pertenecen al panel pero cambian desde TripController.
                 return Obx(() {
                   controller.originAddress.value;
                   controller.destinationAddress.value;
@@ -512,7 +536,6 @@ class _RouteSummaryLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.max,
       children: [
         Container(
           width: 8,
