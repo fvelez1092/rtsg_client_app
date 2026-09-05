@@ -16,11 +16,9 @@ class HomeController extends GetxController {
   final RxBool hasError = false.obs;
 
   final RxList<PartnerAdModel> advertisements = <PartnerAdModel>[].obs;
-
   final RxList<PartnerModel> partners = <PartnerModel>[].obs;
 
   final RxInt selectedAdvertisementIndex = 0.obs;
-  final RxInt selectedBottomIndex = 0.obs;
 
   @override
   void onInit() {
@@ -39,7 +37,6 @@ class HomeController extends GetxController {
       ]);
 
       advertisements.assignAll(results[0] as List<PartnerAdModel>);
-
       partners.assignAll(results[1] as List<PartnerModel>);
     } catch (_) {
       hasError.value = true;
@@ -50,10 +47,6 @@ class HomeController extends GetxController {
 
   void changeAdvertisement(int index) {
     selectedAdvertisementIndex.value = index;
-  }
-
-  void changeBottomIndex(int index) {
-    selectedBottomIndex.value = index;
   }
 
   @override
