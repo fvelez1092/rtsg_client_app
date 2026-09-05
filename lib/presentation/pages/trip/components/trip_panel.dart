@@ -57,7 +57,7 @@ class TripPanel extends GetView<TripController> {
 
         return ListView(
           controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 30),
+          padding: const EdgeInsets.fromLTRB(16, 9, 16, 22),
           children: [
             const _Handle(),
             if (!hasDestination)
@@ -67,7 +67,9 @@ class TripPanel extends GetView<TripController> {
                 onOpenLocation: _openLocation,
               )
             else if (calculating || !hasRoute)
-              _CalculatingContent(onChange: () => _openLocation(RouteSelectMode.destination))
+              _CalculatingContent(
+                onChange: () => _openLocation(RouteSelectMode.destination),
+              )
             else
               _ConfirmationContent(
                 isReservation: isReservation,
@@ -87,9 +89,9 @@ class _Handle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 44,
-        height: 5,
-        margin: const EdgeInsets.only(bottom: 14),
+        width: 42,
+        height: 4,
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: AppColors.borderSoft,
           borderRadius: BorderRadius.circular(99),
@@ -135,9 +137,9 @@ class _SearchContent extends StatelessWidget {
             fontSize: 12,
           ),
         ),
-        const SizedBox(height: 16),
-        _RouteInputs(onOpen: onOpenLocation),
         const SizedBox(height: 14),
+        _RouteInputs(onOpen: onOpenLocation),
+        const SizedBox(height: 12),
         _HintCard(onTap: () => onOpenLocation(RouteSelectMode.destination)),
       ],
     );
@@ -152,7 +154,7 @@ class _CalculatingContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: 6),
       child: Column(
         children: [
           const SizedBox(
@@ -163,7 +165,7 @@ class _CalculatingContent extends StatelessWidget {
               color: AppColors.brandGreen,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           const Text(
             'Calculando la mejor ruta…',
             style: TextStyle(
@@ -181,7 +183,7 @@ class _CalculatingContent extends StatelessWidget {
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           TextButton(
             onPressed: onChange,
             child: const Text('Cambiar destino'),
@@ -215,6 +217,71 @@ class _ConfirmationContent extends GetView<TripController> {
     };
   }
 
+  Future<void> _showPaymentOptions(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Método de pago',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Por ahora solo está disponible el pago en efectivo.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const _PaymentOptionTile(
+                  icon: Icons.payments_rounded,
+                  title: 'Efectivo',
+                  subtitle: 'Paga directamente al conductor',
+                  selected: true,
+                  enabled: true,
+                ),
+                const SizedBox(height: 8),
+                const _PaymentOptionTile(
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Billetera RTSG',
+                  subtitle: 'Próximamente',
+                  selected: false,
+                  enabled: false,
+                ),
+                const SizedBox(height: 8),
+                const _PaymentOptionTile(
+                  icon: Icons.credit_card_rounded,
+                  title: 'Tarjeta',
+                  subtitle: 'Próximamente',
+                  selected: false,
+                  enabled: false,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = controller.status.value;
@@ -222,48 +289,34 @@ class _ConfirmationContent extends GetView<TripController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isReservation ? 'Confirma tu reserva' : 'Elige cómo viajar',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    isReservation && reservationLabel != null
-                        ? reservationLabel!
-                        : 'Selecciona una categoría y confirma tu viaje.',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        Text(
+          isReservation ? 'Confirma tu reserva' : 'Elige cómo viajar',
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 19,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 2),
+        Text(
+          isReservation && reservationLabel != null
+              ? reservationLabel!
+              : 'Selecciona una categoría y confirma tu viaje.',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 10),
         _TripMetrics(
           distanceKm: controller.distanceKm.value,
           durationMin: controller.durationMin.value,
         ),
-        const SizedBox(height: 20),
-        const _SectionTitle(
-          title: 'Elige tu servicio',
-          subtitle: 'Tenemos dos categorías disponibles para este viaje.',
-        ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
+        const _CompactSectionTitle(title: 'Elige tu servicio'),
+        const SizedBox(height: 7),
         _CategoryCard(
           category: TripCategory.normal,
           title: 'Normal',
@@ -273,7 +326,7 @@ class _ConfirmationContent extends GetView<TripController> {
           selected: controller.selectedCategory.value == TripCategory.normal,
           onTap: () => controller.selectCategory(TripCategory.normal),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 7),
         _CategoryCard(
           category: TripCategory.vip,
           title: 'VIP / Ejecutivo',
@@ -283,82 +336,31 @@ class _ConfirmationContent extends GetView<TripController> {
           selected: controller.selectedCategory.value == TripCategory.vip,
           onTap: () => controller.selectCategory(TripCategory.vip),
         ),
-        const SizedBox(height: 20),
-        const _SectionTitle(
-          title: 'Mejora tu oferta',
-          subtitle:
-              'En momentos de alta demanda puedes aumentar el valor para facilitar que una unidad acepte.',
+        const SizedBox(height: 12),
+        const _OfferHeader(),
+        const SizedBox(height: 7),
+        _PriceBoostRow(
+          selected: controller.priceBoost.value,
+          onChanged: controller.setPriceBoost,
         ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: TripController.priceBoostOptions.map((amount) {
-            final active = controller.priceBoost.value == amount;
-            final label = amount == 0
-                ? 'Sin extra'
-                : '+\$${amount.toStringAsFixed(2)}';
-
-            return ChoiceChip(
-              selected: active,
-              onSelected: (_) => controller.setPriceBoost(amount),
-              label: Text(label),
-              selectedColor: AppColors.brandGreen.withValues(alpha: 0.12),
-              backgroundColor: AppColors.surface,
-              side: BorderSide(
-                color: active ? AppColors.brandGreen : AppColors.borderSoft,
-              ),
-              labelStyle: TextStyle(
-                color: active ? AppColors.brandGreen : AppColors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 10),
-        _TotalOffer(total: controller.finalFare),
-        const SizedBox(height: 20),
-        const _SectionTitle(
-          title: 'Método de pago',
-          subtitle: 'Por ahora los viajes se pagan únicamente en efectivo.',
-        ),
-        const SizedBox(height: 10),
-        const _PaymentMethodCard(
-          icon: Icons.payments_rounded,
-          title: 'Efectivo',
-          subtitle: 'Paga directamente al conductor',
-          enabled: true,
-        ),
-        const SizedBox(height: 8),
-        const _PaymentMethodCard(
-          icon: Icons.account_balance_wallet_rounded,
-          title: 'Billetera RTSG',
-          subtitle: 'Próximamente',
-          enabled: false,
-        ),
-        const SizedBox(height: 8),
-        const _PaymentMethodCard(
-          icon: Icons.credit_card_rounded,
-          title: 'Tarjeta',
-          subtitle: 'Próximamente',
-          enabled: false,
-        ),
+        const SizedBox(height: 12),
+        _CompactPaymentTile(onTap: () => _showPaymentOptions(context)),
         if (status != TripStatus.idle) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _StatusCard(
             status: status,
             text: _statusText(status),
-            onCancel: (status == TripStatus.searching ||
-                    status == TripStatus.accepted)
+            onCancel:
+                (status == TripStatus.searching || status == TripStatus.accepted)
                 ? controller.cancelTrip
                 : null,
           ),
         ],
-        const SizedBox(height: 18),
+        const SizedBox(height: 12),
         if (status == TripStatus.idle)
           SizedBox(
             width: double.infinity,
-            height: 58,
+            height: 56,
             child: FilledButton(
               onPressed: controller.canCreateTrip ? controller.createTrip : null,
               style: FilledButton.styleFrom(
@@ -367,7 +369,7 @@ class _ConfirmationContent extends GetView<TripController> {
                 disabledBackgroundColor: AppColors.borderSoft,
                 disabledForegroundColor: AppColors.textSecondary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(17),
                 ),
               ),
               child: Text(
@@ -437,10 +439,10 @@ class _TripMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
         children: [
@@ -449,7 +451,7 @@ class _TripMetrics extends StatelessWidget {
             value: '${distanceKm.toStringAsFixed(1)} km',
             label: 'Distancia',
           ),
-          Container(width: 1, height: 34, color: AppColors.borderSoft),
+          Container(width: 1, height: 30, color: AppColors.borderSoft),
           _Metric(
             icon: Icons.schedule_rounded,
             value: '$durationMin min',
@@ -461,79 +463,89 @@ class _TripMetrics extends StatelessWidget {
   }
 }
 
-class _TotalOffer extends StatelessWidget {
-  final double total;
+class _CompactSectionTitle extends StatelessWidget {
+  final String title;
 
-  const _TotalOffer({required this.total});
+  const _CompactSectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.sell_outlined,
-            size: 20,
-            color: AppColors.brandGreen,
-          ),
-          const SizedBox(width: 9),
-          const Expanded(
-            child: Text(
-              'Oferta total del viaje',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Text(
-            '\$${total.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
+    return Text(
+      title,
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 15,
+        fontWeight: FontWeight.w900,
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _SectionTitle({required this.title, required this.subtitle});
+class _OfferHeader extends StatelessWidget {
+  const _OfferHeader();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-            height: 1.35,
+        const Expanded(child: _CompactSectionTitle(title: 'Mejora tu oferta')),
+        Tooltip(
+          message:
+              'En momentos de alta demanda puedes aumentar el valor para facilitar que una unidad acepte el viaje.',
+          triggerMode: TooltipTriggerMode.tap,
+          child: const Padding(
+            padding: EdgeInsets.all(6),
+            child: Icon(
+              Icons.info_outline_rounded,
+              size: 19,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PriceBoostRow extends StatelessWidget {
+  final double selected;
+  final ValueChanged<double> onChanged;
+
+  const _PriceBoostRow({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 39,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: TripController.priceBoostOptions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 7),
+        itemBuilder: (context, index) {
+          final amount = TripController.priceBoostOptions[index];
+          final active = selected == amount;
+          final label = amount == 0
+              ? 'Sin extra'
+              : '+\$${amount.toStringAsFixed(2)}';
+
+          return ChoiceChip(
+            selected: active,
+            onSelected: (_) => onChanged(amount),
+            label: Text(label),
+            visualDensity: VisualDensity.compact,
+            selectedColor: AppColors.brandGreen.withValues(alpha: 0.12),
+            backgroundColor: AppColors.surface,
+            side: BorderSide(
+              color: active ? AppColors.brandGreen : AppColors.borderSoft,
+            ),
+            labelStyle: TextStyle(
+              color: active ? AppColors.brandGreen : AppColors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -561,43 +573,44 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.all(14),
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected ? AppColors.brandGreen : AppColors.borderSoft,
-              width: selected ? 1.7 : 1,
+              width: selected ? 1.6 : 1,
             ),
           ),
           child: Row(
             children: [
               Container(
-                width: 54,
-                height: 54,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: category == TripCategory.vip
                       ? AppColors.taxiYellow.withValues(alpha: 0.22)
                       : AppColors.brandGreen.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(
                   icon,
-                  size: 29,
+                  size: 25,
                   color: category == TripCategory.vip
                       ? AppColors.textPrimary
                       : AppColors.brandGreen,
                 ),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
@@ -606,40 +619,40 @@ class _CategoryCard extends StatelessWidget {
                             title,
                             style: const TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                         ),
                         if (selected) ...[
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 5),
                           const Icon(
                             Icons.check_circle_rounded,
-                            size: 18,
+                            size: 17,
                             color: AppColors.brandGreen,
                           ),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
+                        fontSize: 10,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Text(
                 '\$${fare.toStringAsFixed(2)}',
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -651,39 +664,86 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-class _PaymentMethodCard extends StatelessWidget {
+class _CompactPaymentTile extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _CompactPaymentTile({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borderSoft),
+          ),
+          child: const Row(
+            children: [
+              Icon(
+                Icons.payments_rounded,
+                size: 22,
+                color: AppColors.brandGreen,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Efectivo',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentOptionTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final bool selected;
   final bool enabled;
 
-  const _PaymentMethodCard({
+  const _PaymentOptionTile({
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.selected,
     required this.enabled,
   });
 
   @override
   Widget build(BuildContext context) {
-    final foreground = enabled
-        ? AppColors.textPrimary
-        : AppColors.textSecondary.withValues(alpha: 0.70);
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       decoration: BoxDecoration(
         color: enabled ? AppColors.surface : AppColors.inputFill,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: enabled ? AppColors.brandGreen : AppColors.borderSoft,
+          color: selected ? AppColors.brandGreen : AppColors.borderSoft,
         ),
       ),
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: enabled
                   ? AppColors.brandGreen.withValues(alpha: 0.10)
@@ -695,50 +755,44 @@ class _PaymentMethodCard extends StatelessWidget {
               color: enabled ? AppColors.brandGreen : AppColors.textSecondary,
             ),
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
                   style: TextStyle(
-                    color: foreground,
+                    color: enabled
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    color: enabled
-                        ? AppColors.textSecondary
-                        : AppColors.textSecondary.withValues(alpha: 0.70),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
                     fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-          if (enabled)
+          if (selected)
             const Icon(
               Icons.check_circle_rounded,
               color: AppColors.brandGreen,
             )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.borderSoft,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Text(
-                'Pronto',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
+          else if (!enabled)
+            const Text(
+              'Pronto',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
               ),
             ),
         ],
@@ -764,10 +818,10 @@ class _StatusCard extends StatelessWidget {
         status == TripStatus.searching || status == TripStatus.creating;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: AppColors.brandGreen.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: AppColors.brandGreen.withValues(alpha: 0.20),
         ),
@@ -788,7 +842,7 @@ class _StatusCard extends StatelessWidget {
               Icons.local_taxi_rounded,
               color: AppColors.brandGreen,
             ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
@@ -939,8 +993,8 @@ class _Metric extends StatelessWidget {
     return Expanded(
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.brandGreen),
-          const SizedBox(width: 8),
+          Icon(icon, size: 19, color: AppColors.brandGreen),
+          const SizedBox(width: 7),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -948,6 +1002,7 @@ class _Metric extends StatelessWidget {
                 value,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
+                  fontSize: 13,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -955,7 +1010,7 @@ class _Metric extends StatelessWidget {
                 label,
                 style: const TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 10,
+                  fontSize: 9,
                 ),
               ),
             ],
