@@ -11,7 +11,7 @@ class AuthController extends GetxController {
   final GlobalMemory _memory = GlobalMemory.to;
 
   AuthController({required AuthService authService})
-    : _authService = authService;
+      : _authService = authService;
 
   final RxBool isLoading = false.obs;
   final RxBool isPasswordVisible = false.obs;
@@ -24,47 +24,61 @@ class AuthController extends GetxController {
   Future<void> login() async {
     FocusManager.instance.primaryFocus?.unfocus();
     error.value = '';
+
+    final email = emailController.text.trim();
+    final pass = passwordController.text.trim();
+
+    if (email.isEmpty || pass.isEmpty) {
+      _showError('Ingresa tu usuario y contraseña.');
+      return;
+    }
+
     isLoading.value = true;
 
     try {
-      final email = emailController.text.trim();
-      final pass = passwordController.text.trim();
+      final response = await _authService.login(LoginRequest(email, pass));
 
-      if (email.isEmpty || pass.isEmpty) {
-        throw Exception('Please enter your credentials');
+      if (!response.success) {
+        throw Exception(
+          response.error ??
+              response.message ??
+              'No fue posible iniciar sesión.',
+        );
       }
 
-      final res = await _authService.login(LoginRequest(email, pass));
+      final token = response.token;
+      final user = response.user;
 
-      if (res.ok != true) {
-        throw Exception(res.error ?? res.message ?? 'Invalid credentials');
+      if (token == null || token.trim().isEmpty) {
+        throw Exception('El servidor no devolvió un token de sesión.');
       }
 
-      final token = res.token;
-      final user = res.data?.user;
-
-      if (token == null || token.trim().isEmpty)
-        throw Exception('Token not received');
-      if (user == null) throw Exception('User not received');
+      if (user == null) {
+        throw Exception('El servidor no devolvió los datos del usuario.');
+      }
 
       await _memory.setToken(token);
       await _memory.setUser(user);
 
       Get.offAllNamed(AppRoutes.HOME);
     } catch (e) {
-      error.value = e.toString().replaceFirst('Exception: ', '');
-      Get.snackbar(
-        'Error',
-        error.value,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF202020),
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(10),
-        borderRadius: 10,
-      );
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void _showError(String message) {
+    error.value = message;
+    Get.snackbar(
+      'No pudimos iniciar sesión',
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF202020),
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(10),
+      borderRadius: 10,
+    );
   }
 
   Future<void> logout() async {
