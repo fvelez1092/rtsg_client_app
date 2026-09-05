@@ -15,7 +15,7 @@ class Home2Controller extends GetxController {
 
   final RxString centerLabel = 'Buscando ubicación…'.obs;
 
-  LatLng lastCenter = LatLng(-0.18065, -78.46783);
+  LatLng lastCenter = const LatLng(-0.18065, -78.46783);
   int _reqId = 0;
 
   @override
@@ -29,7 +29,7 @@ class Home2Controller extends GetxController {
     }
 
     ever<LatLng?>(_gpsService.currentPosition, (pos) {
-      if (pos != null) {
+      if (pos != null && _tripController.destinationLatLng.value == null) {
         lastCenter = pos;
         _resolveAddress(pos);
       }
@@ -47,13 +47,26 @@ class Home2Controller extends GetxController {
     _resolveAddress(center);
   }
 
-  // ✅ Para “Cambiar origen” por búsqueda o por seleccionar en mapa
   void setOriginFromExternal({required LatLng point, required String address}) {
     lastCenter = point;
     centerLabel.value = address;
-
     _tripController.setOrigin(address: address, point: point);
-    update(); // por si usas GetBuilder en algún lado
+    update();
+  }
+
+  Future<bool> useCurrentLocation() async {
+    var position = _gpsService.currentPosition.value;
+
+    if (position == null) {
+      await _gpsService.getCurrentLocation();
+      position = _gpsService.currentPosition.value;
+    }
+
+    if (position == null) return false;
+
+    lastCenter = position;
+    await _resolveAddress(position);
+    return true;
   }
 
   Future<void> _resolveAddress(LatLng center) async {
@@ -68,8 +81,6 @@ class Home2Controller extends GetxController {
 
     final resolved = placeName ?? 'Dirección no disponible';
     centerLabel.value = resolved;
-
-    // sincroniza origen en trip
     _tripController.setOrigin(address: resolved, point: center);
   }
 
