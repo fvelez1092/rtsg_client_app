@@ -11,19 +11,23 @@ import 'package:app_rtsg_client/presentation/pages/trip/components/trip_location
 
 enum RouteSelectMode { origin, destination }
 
-class RouteInputPage extends StatefulWidget {
-  final RouteSelectMode initialMode;
+/// Conserva el nombre anterior para no romper TripPanel, pero ahora funciona
+/// como una experiencia de búsqueda de pantalla completa.
+class RouteInputSheet extends StatefulWidget {
+  final VoidCallback onClose;
+  final RouteSelectMode mode;
 
-  const RouteInputPage({
+  const RouteInputSheet({
     super.key,
-    this.initialMode = RouteSelectMode.destination,
+    required this.onClose,
+    required this.mode,
   });
 
   @override
-  State<RouteInputPage> createState() => _RouteInputPageState();
+  State<RouteInputSheet> createState() => _RouteInputSheetState();
 }
 
-class _RouteInputPageState extends State<RouteInputPage> {
+class _RouteInputSheetState extends State<RouteInputSheet> {
   final TripController controller = Get.find<TripController>();
   final SavedAddressService _savedAddressService = SavedAddressService();
   final FocusNode _searchFocus = FocusNode();
@@ -35,7 +39,7 @@ class _RouteInputPageState extends State<RouteInputPage> {
   @override
   void initState() {
     super.initState();
-    _mode = widget.initialMode;
+    _mode = widget.mode;
     controller.openDestinationSheet();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -73,7 +77,7 @@ class _RouteInputPageState extends State<RouteInputPage> {
       await controller.setDestination(point: point, address: address);
     }
 
-    if (mounted) Get.back();
+    if (mounted) widget.onClose();
   }
 
   Future<void> _selectResult(Map<String, dynamic> item) async {
@@ -82,7 +86,6 @@ class _RouteInputPageState extends State<RouteInputPage> {
     final lon = (item['lon'] as num?)?.toDouble();
 
     if (name.isEmpty || lat == null || lon == null) return;
-
     await _applyPoint(point: LatLng(lat, lon), address: name);
   }
 
@@ -95,7 +98,7 @@ class _RouteInputPageState extends State<RouteInputPage> {
     if (!mounted) return;
 
     if (ok) {
-      Get.back();
+      widget.onClose();
       return;
     }
 
@@ -144,142 +147,143 @@ class _RouteInputPageState extends State<RouteInputPage> {
   @override
   Widget build(BuildContext context) {
     final savedAddresses = _savedAddressService.getAll();
+    final height = MediaQuery.sizeOf(context).height;
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
-              child: Row(
-                children: [
-                  _RoundBackButton(onTap: () => Get.back()),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 9,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.inputFill,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.person_rounded,
-                          size: 19,
-                          color: AppColors.brandGreen,
-                        ),
-                        SizedBox(width: 7),
-                        Text(
-                          'Para mí',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w800,
+    return SizedBox(
+      height: height,
+      child: Scaffold(
+        backgroundColor: AppColors.surface,
+        resizeToAvoidBottomInset: true,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+                child: Row(
+                  children: [
+                    _RoundBackButton(onTap: widget.onClose),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.inputFill,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.person_rounded,
+                            size: 19,
+                            color: AppColors.brandGreen,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Column(
-                children: [
-                  Obx(
-                    () => _LocationSearchField(
-                      active: _isOrigin,
-                      dotColor: AppColors.brandGreen,
-                      hint: 'Punto de partida',
-                      value: controller.originAddress.value,
-                      controller: _isOrigin ? controller.searchCtrl : null,
-                      focusNode: _isOrigin ? _searchFocus : null,
-                      onTap: () => _switchMode(RouteSelectMode.origin),
-                      onChanged: (value) {
-                        controller.onQueryChanged(value);
-                        setState(() {});
-                      },
-                      onClear: () {
-                        controller.searchCtrl.clear();
-                        controller.onQueryChanged('');
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Obx(
-                    () => _LocationSearchField(
-                      active: !_isOrigin,
-                      dotColor: AppColors.brandRed,
-                      hint: '¿A dónde vamos?',
-                      value: controller.destinationAddress.value,
-                      controller: !_isOrigin ? controller.searchCtrl : null,
-                      focusNode: !_isOrigin ? _searchFocus : null,
-                      onTap: () => _switchMode(RouteSelectMode.destination),
-                      onChanged: (value) {
-                        controller.onQueryChanged(value);
-                        setState(() {});
-                      },
-                      onClear: () {
-                        controller.searchCtrl.clear();
-                        controller.onQueryChanged('');
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (savedAddresses.isNotEmpty) ...[
-              const SizedBox(height: 18),
-              SizedBox(
-                height: 42,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: savedAddresses.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final address = savedAddresses[index];
-                    return ActionChip(
-                      avatar: Icon(
-                        _savedIcon(address),
-                        size: 18,
-                        color: AppColors.textSecondary,
+                          SizedBox(width: 7),
+                          Text(
+                            'Para mí',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
-                      label: Text(address.label),
-                      onPressed: () => _useSavedAddress(address),
-                      backgroundColor: AppColors.surface,
-                      side: const BorderSide(color: AppColors.borderSoft),
-                      labelStyle: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    );
-                  },
+                    ),
+                    const Spacer(),
+                    const SizedBox(width: 48),
+                  ],
                 ),
               ),
-            ],
-            const SizedBox(height: 10),
-            Expanded(
-              child: Obx(() {
-                final results = controller.results;
-                final searching = controller.isSearching.value;
-                final hasQuery = controller.searchCtrl.text.trim().isNotEmpty;
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Column(
+                  children: [
+                    Obx(
+                      () => _LocationField(
+                        active: _isOrigin,
+                        dotColor: AppColors.brandGreen,
+                        hint: 'Punto de partida',
+                        value: controller.originAddress.value,
+                        controller: _isOrigin ? controller.searchCtrl : null,
+                        focusNode: _isOrigin ? _searchFocus : null,
+                        onTap: () => _switchMode(RouteSelectMode.origin),
+                        onChanged: (value) {
+                          controller.onQueryChanged(value);
+                          setState(() {});
+                        },
+                        onClear: () {
+                          controller.searchCtrl.clear();
+                          controller.onQueryChanged('');
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Obx(
+                      () => _LocationField(
+                        active: !_isOrigin,
+                        dotColor: AppColors.brandRed,
+                        hint: '¿A dónde vamos?',
+                        value: controller.destinationAddress.value,
+                        controller: !_isOrigin ? controller.searchCtrl : null,
+                        focusNode: !_isOrigin ? _searchFocus : null,
+                        onTap: () => _switchMode(RouteSelectMode.destination),
+                        onChanged: (value) {
+                          controller.onQueryChanged(value);
+                          setState(() {});
+                        },
+                        onClear: () {
+                          controller.searchCtrl.clear();
+                          controller.onQueryChanged('');
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (savedAddresses.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: savedAddresses.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final address = savedAddresses[index];
+                      return ActionChip(
+                        avatar: Icon(
+                          _savedIcon(address),
+                          size: 17,
+                          color: AppColors.textSecondary,
+                        ),
+                        label: Text(address.label),
+                        onPressed: () => _useSavedAddress(address),
+                        backgroundColor: AppColors.surface,
+                        side: const BorderSide(color: AppColors.borderSoft),
+                        labelStyle: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Expanded(
+                child: Obx(() {
+                  final results = controller.results;
+                  final searching = controller.isSearching.value;
+                  final hasQuery = controller.searchCtrl.text.trim().isNotEmpty;
 
-                if (searching) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(bottom: 90),
+                  if (searching) {
+                    return const Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -297,101 +301,96 @@ class _RouteInputPageState extends State<RouteInputPage> {
                           ),
                         ],
                       ),
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                if (results.isNotEmpty) {
-                  return ListView.separated(
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
-                    itemCount: results.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 1,
-                      color: AppColors.borderSoft,
-                    ),
-                    itemBuilder: (context, index) {
-                      final item = results[index];
-                      final name = (item['display_name'] ?? 'Sin nombre')
-                          .toString();
+                  if (results.isNotEmpty) {
+                    return ListView.separated(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+                      itemCount: results.length,
+                      separatorBuilder: (_, __) => const Divider(
+                        height: 1,
+                        color: AppColors.borderSoft,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = results[index];
+                        return _ResultTile(
+                          title: (item['display_name'] ?? 'Sin nombre')
+                              .toString(),
+                          onTap: () => _selectResult(item),
+                        );
+                      },
+                    );
+                  }
 
-                      return _ResultTile(
-                        title: name,
-                        onTap: () => _selectResult(item),
-                      );
-                    },
-                  );
-                }
-
-                if (hasQuery) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(bottom: 90),
+                  if (hasQuery) {
+                    return const Center(
                       child: Text(
                         'No encontramos resultados para esta búsqueda.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                return ListView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
-                  children: [
-                    if (_isOrigin)
+                  return ListView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+                    children: [
+                      if (_isOrigin)
+                        _ActionTile(
+                          icon: Icons.my_location_rounded,
+                          title: 'Mi ubicación actual',
+                          subtitle: controller.originAddress.value.isEmpty
+                              ? 'Usar la ubicación del GPS'
+                              : controller.originAddress.value,
+                          onTap: _useCurrentLocation,
+                        ),
                       _ActionTile(
-                        icon: Icons.my_location_rounded,
-                        title: 'Mi ubicación actual',
-                        subtitle: controller.originAddress.value.isEmpty
-                            ? 'Usar la ubicación del GPS'
-                            : controller.originAddress.value,
-                        onTap: _useCurrentLocation,
+                        icon: Icons.location_on_outlined,
+                        title: 'Señalar la ubicación en el mapa',
+                        subtitle: _isOrigin
+                            ? 'Ajusta con precisión el punto de partida'
+                            : 'Mueve el mapa hasta el destino exacto',
+                        onTap: _selectOnMap,
                       ),
-                    _ActionTile(
-                      icon: Icons.location_on_outlined,
-                      title: 'Señalar la ubicación en el mapa',
-                      subtitle: _isOrigin
-                          ? 'Ajusta con precisión el punto de partida'
-                          : 'Mueve el mapa hasta el destino exacto',
-                      onTap: _selectOnMap,
-                    ),
-                    if (savedAddresses.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(top: 18, bottom: 6),
-                        child: Text(
-                          'Tus lugares',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
+                      if (savedAddresses.isNotEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsets.only(top: 18, bottom: 6),
+                          child: Text(
+                            'Tus lugares',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ),
-                      ),
-                      ...savedAddresses.map(
-                        (address) => _ActionTile(
-                          icon: _savedIcon(address),
-                          title: address.label,
-                          subtitle: address.address,
-                          onTap: () => _useSavedAddress(address),
+                        ...savedAddresses.map(
+                          (address) => _ActionTile(
+                            icon: _savedIcon(address),
+                            title: address.label,
+                            subtitle: address.address,
+                            onTap: () => _useSavedAddress(address),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                );
-              }),
-            ),
-          ],
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _LocationSearchField extends StatelessWidget {
+class _LocationField extends StatelessWidget {
   final bool active;
   final Color dotColor;
   final String hint;
@@ -402,7 +401,7 @@ class _LocationSearchField extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
 
-  const _LocationSearchField({
+  const _LocationField({
     required this.active,
     required this.dotColor,
     required this.hint,
@@ -416,8 +415,6 @@ class _LocationSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = active ? AppColors.borderSoft : AppColors.borderSoft;
-
     return Material(
       color: active ? AppColors.inputFill : AppColors.surface,
       borderRadius: BorderRadius.circular(20),
@@ -426,11 +423,11 @@ class _LocationSearchField extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           minHeight: 60,
+          padding: const EdgeInsets.only(left: 15, right: 6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: borderColor),
+            border: Border.all(color: AppColors.borderSoft),
           ),
-          padding: const EdgeInsets.only(left: 15, right: 6),
           child: Row(
             children: [
               Container(
@@ -572,10 +569,6 @@ class _ResultTile extends StatelessWidget {
           fontSize: 15,
           fontWeight: FontWeight.w800,
         ),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.textSecondary,
       ),
     );
   }
