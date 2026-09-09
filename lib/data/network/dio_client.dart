@@ -8,8 +8,12 @@ class ApiClient {
       BaseOptions(
         // Concatenamos base + versión UNA sola vez
         baseUrl: '${ApiConstants.baseUrl}${ApiConstants.versionAPI}',
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 20),
+        connectTimeout: const Duration(
+          milliseconds: ApiConstants.connectTimeout,
+        ),
+        receiveTimeout: const Duration(
+          milliseconds: ApiConstants.receiveTimeout,
+        ),
       ),
     );
     _dio.interceptors.add(ApiInterceptor());

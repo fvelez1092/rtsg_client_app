@@ -1,19 +1,50 @@
 abstract class ApiConstants {
-  //static const String baseUrl = 'https://api.manporcar26.com.ec/api/';
-  static const String baseUrl = 'https://3xx44gt9-3001.use.devtunnels.ms/api/';
-  static const String mapboxBaseUrl = 'api.mapbox.com';
-  static const String mapboxGeocodingPath = '/geocoding/v5/mapbox.places';
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://apiv2.rtsg.ceibocode.com/api/',
+  );
 
-  /// Idioma de la respuesta de direcciones
-  static const String mapboxLanguage = 'es';
-  static const String mapboxDirectionsPath = '/directions/v5/mapbox';
+  static const String versionAPI = String.fromEnvironment(
+    'API_VERSION',
+    defaultValue: 'v3',
+  );
 
-  /// Tipos priorizados (puedes ajustar según tu caso)
-  static const String mapboxTypes = 'address,place,locality,neighborhood,poi';
-  static const String mapboxAccessToken =
-      "pk.eyJ1IjoiY2VpYm9jb2RldGVjaCIsImEiOiJjbWtoM3E3eW0wZW5pM3BxMGIzOGQ5dm92In0.o2tWBoUaFRYIlo8tX_bu9A";
+  static const String mapboxBaseUrl = String.fromEnvironment(
+    'MAPBOX_BASE_URL',
+    defaultValue: 'api.mapbox.com',
+  );
 
-  static const String versionAPI = "v3";
-  static const int connectTimeout = 30000;
-  static const int receiveTimeout = 30000;
+  static const String mapboxGeocodingPath = String.fromEnvironment(
+    'MAPBOX_GEOCODING_PATH',
+    defaultValue: '/geocoding/v5/mapbox.places',
+  );
+
+  static const String mapboxDirectionsPath = String.fromEnvironment(
+    'MAPBOX_DIRECTIONS_PATH',
+    defaultValue: '/directions/v5/mapbox',
+  );
+
+  static const String mapboxLanguage = String.fromEnvironment(
+    'MAPBOX_LANGUAGE',
+    defaultValue: 'es',
+  );
+
+  static const String mapboxTypes = String.fromEnvironment(
+    'MAPBOX_TYPES',
+    defaultValue: 'address,place,locality,neighborhood,poi',
+  );
+
+  static const String mapboxAccessToken = String.fromEnvironment(
+    'MAPBOX_ACCESS_TOKEN',
+  );
+
+  static const int connectTimeout = int.fromEnvironment(
+    'API_CONNECT_TIMEOUT_MS',
+    defaultValue: 30000,
+  );
+
+  static const int receiveTimeout = int.fromEnvironment(
+    'API_RECEIVE_TIMEOUT_MS',
+    defaultValue: 30000,
+  );
 }
