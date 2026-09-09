@@ -1,118 +1,138 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
+import 'package:app_rtsg_client/application/trips_controller.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
-import 'package:app_rtsg_client/presentation/widgets/main_bottom_navigation.dart';
+import 'package:app_rtsg_client/data/models/trips/trip_model.dart';
 
-class ActivityPage extends StatelessWidget {
+class ActivityPage extends GetView<TripsController> {
   const ActivityPage({super.key});
 
-  static const _trips = [
-    _MockTrip(
-      date: 'Hoy · 09:42',
-      origin: 'La Carolina',
-      destination: 'Centro Histórico',
-      price: r'$4.80',
-      distance: '6.8 km',
-      status: 'Completado',
-    ),
-    _MockTrip(
-      date: '3 sep · 18:15',
-      origin: 'Iñaquito',
-      destination: 'Cumbayá',
-      price: r'$7.25',
-      distance: '12.3 km',
-      status: 'Completado',
-    ),
-    _MockTrip(
-      date: '30 ago · 12:20',
-      origin: 'El Batán',
-      destination: 'Aeropuerto Mariscal Sucre',
-      price: r'$18.40',
-      distance: '34.1 km',
-      status: 'Completado',
-    ),
-    _MockTrip(
-      date: '27 ago · 08:05',
-      origin: 'Plaza Foch',
-      destination: 'Universidad Central',
-      price: r'$3.60',
-      distance: '5.2 km',
-      status: 'Completado',
-    ),
-  ];
+  String _statusLabel(TripStatus status) {
+    switch (status) {
+      case TripStatus.pending:
+        return 'Pendiente';
+      case TripStatus.verified:
+        return 'Verificado';
+      case TripStatus.inProgress:
+        return 'En progreso';
+      case TripStatus.completed:
+        return 'Completado';
+      case TripStatus.cancelled:
+        return 'Cancelado';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
-          children: [
-            Text(
-              'Tu actividad',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w900,
+    return Obx(() {
+      final trips = controller.trips;
+      final totalDistance = trips.fold<double>(
+        0,
+        (sum, trip) => sum + trip.distanceKm.toDouble(),
+      );
+      final totalSpent = trips.fold<double>(
+        0,
+        (sum, trip) => sum + trip.cost.toDouble(),
+      );
+
+      return SafeArea(
+        child: RefreshIndicator(
+          onRefresh: controller.fetchTrips,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+            children: [
+              Text(
+                'Tu actividad',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              'Historial de viajes realizados con RTSG.',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 22),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.borderSoft),
+              const SizedBox(height: 5),
+              const Text(
+                'Historial de viajes realizados con RTSG.',
+                style: TextStyle(color: AppColors.textSecondary),
               ),
-              child: const Row(
-                children: [
-                  Expanded(
-                    child: _Stat(label: 'Viajes', value: '12'),
-                  ),
-                  SizedBox(
-                    height: 42,
-                    child: VerticalDivider(color: AppColors.borderSoft),
-                  ),
-                  Expanded(
-                    child: _Stat(label: 'Distancia', value: '126 km'),
-                  ),
-                  SizedBox(
-                    height: 42,
-                    child: VerticalDivider(color: AppColors.borderSoft),
-                  ),
-                  Expanded(
-                    child: _Stat(label: 'Gastado', value: r'$86.35'),
-                  ),
-                ],
+              const SizedBox(height: 22),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.borderSoft),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _Stat(
+                        label: 'Viajes',
+                        value: trips.length.toString(),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 42,
+                      child: VerticalDivider(color: AppColors.borderSoft),
+                    ),
+                    Expanded(
+                      child: _Stat(
+                        label: 'Distancia',
+                        value: '${totalDistance.toStringAsFixed(1)} km',
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 42,
+                      child: VerticalDivider(color: AppColors.borderSoft),
+                    ),
+                    Expanded(
+                      child: _Stat(
+                        label: 'Gastado',
+                        value: '\$${totalSpent.toStringAsFixed(2)}',
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Viajes recientes',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w800,
+              const SizedBox(height: 24),
+              Text(
+                'Viajes recientes',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            ..._trips.map(
-              (trip) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _TripCard(trip: trip),
-              ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              if (controller.loading.value && trips.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (controller.error.value.isNotEmpty && trips.isEmpty)
+                _ErrorState(
+                  message: controller.error.value,
+                  onRetry: controller.fetchTrips,
+                )
+              else if (trips.isEmpty)
+                const _EmptyState()
+              else
+                ...trips.map(
+                  (trip) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _TripCard(
+                      trip: trip,
+                      statusLabel: _statusLabel(trip.status),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: const MainBottomNavigation(currentIndex: 1),
-    );
+      );
+    });
   }
 }
 
@@ -128,6 +148,7 @@ class _Stat extends StatelessWidget {
       children: [
         Text(
           value,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 17,
@@ -148,12 +169,16 @@ class _Stat extends StatelessWidget {
 }
 
 class _TripCard extends StatelessWidget {
-  const _TripCard({required this.trip});
+  const _TripCard({required this.trip, required this.statusLabel});
 
-  final _MockTrip trip;
+  final Trip trip;
+  final String statusLabel;
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = Trip.leftBorder(trip.status);
+    final date = DateFormat('dd MMM · HH:mm', 'es').format(trip.requestedDate);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -165,24 +190,25 @@ class _TripCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                trip.date,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
+              Expanded(
+                child: Text(
+                  date,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
               ),
-              const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.brandGreen.withValues(alpha: 0.10),
+                  color: statusColor.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  trip.status,
-                  style: const TextStyle(
-                    color: AppColors.brandGreen,
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -191,10 +217,7 @@ class _TripCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 15),
-          _PointRow(
-            color: AppColors.brandGreen,
-            text: trip.origin,
-          ),
+          _PointRow(color: AppColors.brandGreen, text: trip.departureAddress),
           const Padding(
             padding: EdgeInsets.only(left: 5),
             child: Align(
@@ -209,10 +232,7 @@ class _TripCard extends StatelessWidget {
               ),
             ),
           ),
-          _PointRow(
-            color: AppColors.brandRed,
-            text: trip.destination,
-          ),
+          _PointRow(color: AppColors.brandRed, text: trip.destinationAddress),
           const SizedBox(height: 15),
           const Divider(height: 1, color: AppColors.borderSoft),
           const SizedBox(height: 13),
@@ -225,7 +245,7 @@ class _TripCard extends StatelessWidget {
               ),
               const SizedBox(width: 5),
               Text(
-                trip.distance,
+                '${trip.distanceKm.toStringAsFixed(1)} km',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
@@ -233,7 +253,7 @@ class _TripCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                trip.price,
+                Trip.priceLabel(trip),
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 16,
@@ -266,7 +286,7 @@ class _PointRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            text,
+            text.isEmpty ? 'Dirección no disponible' : text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -280,20 +300,88 @@ class _PointRow extends StatelessWidget {
   }
 }
 
-class _MockTrip {
-  const _MockTrip({
-    required this.date,
-    required this.origin,
-    required this.destination,
-    required this.price,
-    required this.distance,
-    required this.status,
-  });
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
 
-  final String date;
-  final String origin;
-  final String destination;
-  final String price;
-  final String distance;
-  final String status;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: const Column(
+        children: [
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 42,
+            color: AppColors.textSecondary,
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Todavía no tienes viajes registrados.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 38,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'No pudimos cargar tu actividad.',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton(
+            onPressed: onRetry,
+            child: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    );
+  }
 }
