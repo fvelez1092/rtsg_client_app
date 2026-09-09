@@ -10,15 +10,12 @@ class TripService {
   Future<Trip> createTrip(TripRequest input) async {
     try {
       final response = await _dio.post(
-        '/transport/request',
+        '/carreras/crear.carrera',
         data: input.toJson(),
       );
 
       final body = _asMap(response.data, response.requestOptions);
-      final api = ApiResponse<List<Trip>>.fromJson(
-        body,
-        _parseTrips,
-      );
+      final api = ApiResponse<List<Trip>>.fromJson(body, _parseTrips);
 
       if (!api.ok || api.data.isEmpty) {
         throw DioException(
@@ -47,10 +44,7 @@ class TripService {
       final response = await _dio.get('/transport/request/user');
       final body = _asMap(response.data, response.requestOptions);
 
-      final api = ApiResponse<List<Trip>>.fromJson(
-        body,
-        _parseTrips,
-      );
+      final api = ApiResponse<List<Trip>>.fromJson(body, _parseTrips);
 
       if (!api.ok) {
         throw DioException(

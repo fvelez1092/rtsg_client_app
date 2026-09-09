@@ -11,7 +11,7 @@ class AuthService {
     try {
       final res = await _dio.post(
         '/acceder',
-        data: {'user': req.userName, 'password': req.password},
+        data: {'usuario': req.userName, 'contrasena': req.password},
       );
 
       final data = res.data;
@@ -73,9 +73,9 @@ class AuthService {
   String _extractMessage(DioException e) {
     final data = e.response?.data;
     if (data is Map<String, dynamic>) {
-      final msg = (
-        data['observacion'] ?? data['error'] ?? data['message'] ?? ''
-      ).toString();
+      final msg =
+          (data['observacion'] ?? data['error'] ?? data['message'] ?? '')
+              .toString();
       if (msg.trim().isNotEmpty && msg.trim().toLowerCase() != 'null') {
         return msg.trim();
       }

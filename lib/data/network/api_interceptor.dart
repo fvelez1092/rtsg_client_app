@@ -39,7 +39,8 @@ class ApiInterceptor extends Interceptor {
       );
     }
 
-    options.headers['Authorization'] = 'Bearer $token';
+    //options.headers['Authorization'] = 'Bearer $token';
+    options.headers['x-access-token'] = token;
     handler.next(options);
   }
 
