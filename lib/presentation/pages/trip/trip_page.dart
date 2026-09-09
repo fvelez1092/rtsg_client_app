@@ -22,6 +22,34 @@ class _TripPageState extends State<TripPage> {
   double _routeSheetExtent = 0.55;
   double _searchSheetExtent = 0.32;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyInitialDestination();
+    });
+  }
+
+  Future<void> _applyInitialDestination() async {
+    final args = Get.arguments;
+    if (args is! Map) return;
+
+    final latitude = (args['destinationLatitude'] as num?)?.toDouble();
+    final longitude = (args['destinationLongitude'] as num?)?.toDouble();
+    final address = (args['destinationAddress'] ?? '').toString().trim();
+
+    if (latitude == null || longitude == null || address.isEmpty) return;
+
+    if (controller.originLatLng.value == null) {
+      await controller.useCurrentLocation();
+    }
+
+    await controller.setDestination(
+      address: address,
+      point: LatLng(latitude, longitude),
+    );
+  }
+
   bool _onSheetNotification(
     DraggableScrollableNotification notification, {
     required bool hasRoute,
