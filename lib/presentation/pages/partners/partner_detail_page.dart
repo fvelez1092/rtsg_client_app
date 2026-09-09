@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
+import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
 class PartnerDetailPage extends StatelessWidget {
   const PartnerDetailPage({super.key});
@@ -210,15 +211,30 @@ class PartnerDetailPage extends StatelessWidget {
                   height: 56,
                   child: FilledButton.icon(
                     onPressed: () {
-                      Get.snackbar(
-                        'Beneficio activado',
-                        'Este flujo es de demostración. Más adelante se conectará al backend del partner.',
-                        snackPosition: SnackPosition.BOTTOM,
-                        margin: const EdgeInsets.all(16),
+                      final latitude = data.latitude;
+                      final longitude = data.longitude;
+
+                      if (latitude == null || longitude == null) {
+                        Get.snackbar(
+                          'Ubicación no disponible',
+                          'Este partner todavía no tiene coordenadas registradas.',
+                          snackPosition: SnackPosition.BOTTOM,
+                          margin: const EdgeInsets.all(16),
+                        );
+                        return;
+                      }
+
+                      Get.toNamed(
+                        AppRoutes.TRIP,
+                        arguments: {
+                          'destinationLatitude': latitude,
+                          'destinationLongitude': longitude,
+                          'destinationAddress': data.name,
+                        },
                       );
                     },
-                    icon: const Icon(Icons.redeem_rounded),
-                    label: const Text('Usar beneficio'),
+                    icon: const Icon(Icons.directions_car_rounded),
+                    label: const Text('Llévame ahí'),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.brandGreen,
                       foregroundColor: AppColors.surface,
@@ -272,6 +288,8 @@ class _PartnerDetailData {
     required this.offer,
     required this.imageUrl,
     required this.rating,
+    this.latitude,
+    this.longitude,
   });
 
   final String name;
@@ -280,6 +298,8 @@ class _PartnerDetailData {
   final String offer;
   final String imageUrl;
   final String rating;
+  final double? latitude;
+  final double? longitude;
 
   factory _PartnerDetailData.from(dynamic source) {
     if (source is PartnerAdModel) {
@@ -309,6 +329,8 @@ class _PartnerDetailData {
         offer: offer,
         imageUrl: source.logoUrl,
         rating: source.rating.toStringAsFixed(1),
+        latitude: source.latitude,
+        longitude: source.longitude,
       );
     }
 

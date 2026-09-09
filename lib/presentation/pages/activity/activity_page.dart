@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:app_rtsg_client/application/trips_controller.dart';
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/data/models/trips/trip_model.dart';
+import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
 class ActivityPage extends GetView<TripsController> {
   const ActivityPage({super.key});
@@ -39,10 +40,17 @@ class ActivityPage extends GetView<TripsController> {
         (sum, trip) => sum + trip.cost.toDouble(),
       );
 
+      final showCreateButton =
+          !controller.loading.value &&
+          controller.error.value.isEmpty &&
+          trips.isEmpty;
+
       return SafeArea(
-        child: RefreshIndicator(
-          onRefresh: controller.fetchTrips,
-          child: ListView(
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: controller.fetchTrips,
+              child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
             children: [
@@ -128,8 +136,26 @@ class ActivityPage extends GetView<TripsController> {
                     ),
                   ),
                 ),
-            ],
-          ),
+                ],
+              ),
+            ),
+            if (showCreateButton)
+              Positioned(
+                right: 20,
+                bottom: 16,
+                child: FloatingActionButton.extended(
+                  heroTag: 'activity-create-trip',
+                  onPressed: () => Get.toNamed(AppRoutes.TRIP),
+                  backgroundColor: AppColors.brandGreen,
+                  foregroundColor: AppColors.surface,
+                  icon: const Icon(Icons.add_road_rounded),
+                  label: const Text(
+                    'Nueva carrera',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+          ],
         ),
       );
     });
