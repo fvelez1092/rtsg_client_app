@@ -101,36 +101,15 @@ class ProfilePage extends GetView<ProfileController> {
                   );
                 }),
                 const SizedBox(height: 4),
-                Text(
-                  "Conductor Profesional",
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onPrimary.withValues(alpha: 0.75),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.star, color: cs.secondary, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      "4.8",
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.onPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                Obx(() {
+                  return Text(
+                    controller.role,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onPrimary.withValues(alpha: 0.75),
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      "156 viajes",
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.onPrimary.withValues(alpha: 0.75),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                }),
               ],
             ),
           ),
@@ -172,7 +151,11 @@ class ProfilePage extends GetView<ProfileController> {
                       ),
                       ProfileInfoItem(
                         label: "Dirección principal",
-                        value: controller.address,
+                        value: controller.loadingAddresses.value
+                            ? "Cargando dirección…"
+                            : controller.address.isEmpty
+                                ? "Sin dirección registrada"
+                                : controller.address,
                       ),
                     ],
                   ),

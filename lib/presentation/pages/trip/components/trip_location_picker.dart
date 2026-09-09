@@ -93,15 +93,24 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
         return;
       }
 
-      await _savedAddressService.save(
-        SavedAddress(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
-          label: label,
-          address: _address,
-          latitude: _center.latitude,
-          longitude: _center.longitude,
-        ),
-      );
+      try {
+        await _savedAddressService.save(
+          SavedAddress(
+            label: label,
+            address: _address,
+            latitude: _center.latitude,
+            longitude: _center.longitude,
+          ),
+        );
+      } catch (error) {
+        Get.snackbar(
+          'No se pudo guardar',
+          error.toString(),
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(16),
+        );
+        return;
+      }
     }
 
     if (!mounted) return;

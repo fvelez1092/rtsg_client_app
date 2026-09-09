@@ -1,6 +1,8 @@
 import 'dart:io';
 
-import 'package:app_rtsg_client/data/models/client_model.dart';
+import 'package:app_rtsg_client/data/models/saved_address_model.dart';
+import 'package:app_rtsg_client/data/services/saved_address_service.dart';
+import 'package:app_rtsg_client/data/models/user_model.dart';
 import 'package:app_rtsg_client/global_memory.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -9,35 +11,45 @@ import 'package:image_picker/image_picker.dart';
 enum ProfilePhotoSource { camera, gallery }
 
 class ProfileController extends GetxController {
+  ProfileController(this._addressService);
+
+  final SavedAddressService _addressService;
   final GlobalMemory _globalMemory = GlobalMemory.to;
 
-  final Rx<Client?> currentClient = Rx<Client?>(null);
+  final Rxn<User> currentUser = Rxn<User>();
+  final RxList<SavedAddress> addresses = <SavedAddress>[].obs;
+  final RxBool loadingAddresses = false.obs;
+  final RxString addressError = ''.obs;
 
-  /// Local preview after picking an image (camera/gallery)
   final RxnString localPhotoPath = RxnString();
-
-  /// Used by UI to trigger bottom sheet; controller does NOT show UI.
   final Rxn<ProfilePhotoSource> requestedPhotoSource =
       Rxn<ProfilePhotoSource>();
-
   final ImagePicker _picker = ImagePicker();
 
   @override
   void onInit() {
     super.onInit();
-    _loadClient();
+    currentUser.value = _globalMemory.user;
+    loadAddresses();
   }
 
-  Future<void> _loadClient() async {
-    //currentClient.value = await _globalMemory.getDriverData();
+  Future<void> loadAddresses() async {
+    loadingAddresses.value = true;
+    addressError.value = '';
+
+    try {
+      addresses.assignAll(await _addressService.getAll());
+    } catch (error) {
+      addressError.value = error.toString();
+    } finally {
+      loadingAddresses.value = false;
+    }
   }
 
-  /// UI calls this to request showing bottom sheet
   void requestPhotoPicker() {
-    requestedPhotoSource.value = null; // reset
+    requestedPhotoSource.value = null;
   }
 
-  /// UI calls this when user picked a source (camera/gallery)
   Future<void> pickPhoto(ProfilePhotoSource source) async {
     try {
       final XFile? img = await _picker.pickImage(
@@ -48,32 +60,34 @@ class ProfileController extends GetxController {
         maxWidth: 1024,
       );
       if (img == null) return;
-
       localPhotoPath.value = img.path;
-
-      // TODO: uploadPhoto(File(img.path)) if you have API
     } catch (_) {
-      // No UI here; just expose error via state if you want
-      Get.snackbar("Error", "Could not pick image");
+      Get.snackbar('Error', 'No se pudo seleccionar la imagen');
     }
   }
 
   ImageProvider? get avatarImageProvider {
     final path = localPhotoPath.value;
-    if (path != null && path.isNotEmpty) {
-      return FileImage(File(path));
+    if (path != null && path.isNotEmpty) return FileImage(File(path));
+
+    final photo = currentUser.value?.photo;
+    if (photo is String && photo.trim().isNotEmpty) {
+      return NetworkImage(photo.trim());
     }
-
-    // If Driver has a photo URL, map it here:
-    // final url = currentDriver.value?.photoUrl;
-    // if (url != null && url.isNotEmpty) return NetworkImage(url);
-
     return null;
   }
 
-  // ------- read-only getters to keep UI light (this is OK: not UI, just mapping data) -------
-  String get fullName => currentClient.value?.razonSocial ?? "";
-  String get phone => currentClient.value?.cellular ?? "";
-  String get email => currentClient.value?.email ?? "";
-  String get address => currentClient.value?.address ?? "";
+  SavedAddress? get defaultAddress {
+    for (final address in addresses) {
+      if (address.isDefault) return address;
+    }
+    return addresses.isEmpty ? null : addresses.first;
+  }
+
+  String get fullName => currentUser.value?.displayName ?? '';
+  String get phone => currentUser.value?.cellphone ?? '';
+  String get email => currentUser.value?.email ?? '';
+  String get role => currentUser.value?.role ?? 'Cliente RTSG';
+  String get address =>
+      defaultAddress?.address ?? currentUser.value?.address ?? '';
 }
