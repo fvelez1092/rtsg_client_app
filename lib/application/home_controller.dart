@@ -1,49 +1,27 @@
+import 'package:app_rtsg_client/application/home_content_controller.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
-import 'package:app_rtsg_client/data/services/home_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
-  HomeController(this._homeService);
+  HomeController(this._contentController);
 
-  final HomeService _homeService;
+  final HomeContentController _contentController;
 
   final PageController advertisementsPageController = PageController(
     viewportFraction: 0.91,
   );
 
-  final RxBool isLoading = false.obs;
-  final RxBool hasError = false.obs;
-
-  final RxList<PartnerAdModel> advertisements = <PartnerAdModel>[].obs;
-  final RxList<PartnerModel> partners = <PartnerModel>[].obs;
-
   final RxInt selectedAdvertisementIndex = 0.obs;
 
-  @override
-  void onInit() {
-    super.onInit();
-    loadHome();
-  }
+  RxBool get isLoading => _contentController.isLoading;
+  RxBool get hasError => _contentController.hasError;
+  RxString get errorMessage => _contentController.errorMessage;
 
-  Future<void> loadHome() async {
-    try {
-      isLoading.value = true;
-      hasError.value = false;
+  RxList<PartnerAdModel> get advertisements => _contentController.publicidades;
+  RxList<PartnerModel> get partners => _contentController.partners;
 
-      final results = await Future.wait([
-        _homeService.getPartnerAds(),
-        _homeService.getPartners(),
-      ]);
-
-      advertisements.assignAll(results[0] as List<PartnerAdModel>);
-      partners.assignAll(results[1] as List<PartnerModel>);
-    } catch (_) {
-      hasError.value = true;
-    } finally {
-      isLoading.value = false;
-    }
-  }
+  Future<void> loadHome() => _contentController.loadContent();
 
   void changeAdvertisement(int index) {
     selectedAdvertisementIndex.value = index;
