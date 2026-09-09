@@ -6,24 +6,24 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:app_rtsg_client/data/models/trip_model.dart';
 import 'package:app_rtsg_client/data/models/trip_status.dart';
+import 'package:app_rtsg_client/data/models/request/trip_request.dart';
 import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:app_rtsg_client/data/services/mapbox_service.dart';
-import 'package:app_rtsg_client/data/services/trip_simulator_service.dart';
+import 'package:app_rtsg_client/data/services/trip_service.dart';
+import 'package:app_rtsg_client/global_memory.dart';
 
 enum TripCategory { normal, vip }
 
 class TripController extends GetxController {
   final MapboxGeocoder _geocoder;
   final GpsService _gps = Get.find<GpsService>();
-  final TripSimulatorService _sim = Get.find<TripSimulatorService>();
+  final TripService _tripService = Get.find<TripService>();
 
   TripController({MapboxGeocoder? geocoder})
       : _geocoder = geocoder ?? MapboxGeocoder();
 
-  // ---------------- MAPA / ORIGEN ----------------
   final RxString centerLabel = 'Buscando ubicación…'.obs;
   final RxBool isResolvingOrigin = false.obs;
-
   final RxString originAddress = ''.obs;
   final Rx<LatLng?> originLatLng = Rx<LatLng?>(null);
 
@@ -58,10 +58,7 @@ class TripController extends GetxController {
   void setOrigin({required String address, required LatLng point}) {
     originAddress.value = address;
     originLatLng.value = point;
-
-    if (destinationLatLng.value != null) {
-      recalculateIfPossible();
-    }
+    if (destinationLatLng.value != null) recalculateIfPossible();
   }
 
   void onMapChanged(LatLng center, double zoom, {required bool isFinal}) {
@@ -82,10 +79,7 @@ class TripController extends GetxController {
     _resolveOriginAddress(center);
   }
 
-  void setOriginFromExternal({
-    required LatLng point,
-    required String address,
-  }) {
+  void setOriginFromExternal({required LatLng point, required String address}) {
     _originReqId++;
     _originWasSelectedManually = true;
     lastCenter = point;
@@ -96,12 +90,10 @@ class TripController extends GetxController {
 
   Future<bool> useCurrentLocation() async {
     var position = _gps.currentPosition.value;
-
     if (position == null) {
       await _gps.getCurrentLocation();
       position = _gps.currentPosition.value;
     }
-
     if (position == null) return false;
 
     _originWasSelectedManually = false;
@@ -129,24 +121,19 @@ class TripController extends GetxController {
       if (currentReq != _originReqId) return;
       centerLabel.value = 'Dirección no disponible';
     } finally {
-      if (currentReq == _originReqId) {
-        isResolvingOrigin.value = false;
-      }
+      if (currentReq == _originReqId) isResolvingOrigin.value = false;
     }
   }
 
-  // ---------------- DESTINO ----------------
   final RxString destinationAddress = ''.obs;
   final Rx<LatLng?> destinationLatLng = Rx<LatLng?>(null);
 
-  // ---------------- SEARCH ----------------
   final TextEditingController searchCtrl = TextEditingController();
   final RxBool isSearching = false.obs;
   final RxList<Map<String, dynamic>> results = <Map<String, dynamic>>[].obs;
 
   Timer? _debounce;
   int _searchReqId = 0;
-
   int limit = 6;
   double maxDistanceKm = 50;
   String country = 'ec';
@@ -161,7 +148,6 @@ class TripController extends GetxController {
 
   void onQueryChanged(String value) {
     _debounce?.cancel();
-
     final q = value.trim();
     if (q.isEmpty) {
       results.clear();
@@ -170,11 +156,9 @@ class TripController extends GetxController {
     }
 
     isSearching.value = true;
-
     _debounce = Timer(const Duration(milliseconds: 350), () async {
       final currentReq = ++_searchReqId;
       final pos = _userPos;
-
       final list = await _geocoder.search(
         query: q,
         userLat: pos?.latitude,
@@ -183,9 +167,7 @@ class TripController extends GetxController {
         maxDistanceKm: maxDistanceKm,
         country: country,
       );
-
       if (currentReq != _searchReqId) return;
-
       results.assignAll(list);
       isSearching.value = false;
     });
@@ -199,17 +181,12 @@ class TripController extends GetxController {
 
     destinationAddress.value = name;
     destinationLatLng.value = point;
-
     results.clear();
     isSearching.value = false;
-
     await recalculateIfPossible();
   }
 
-  Future<void> setDestination({
-    required String address,
-    required LatLng point,
-  }) async {
+  Future<void> setDestination({required String address, required LatLng point}) async {
     destinationAddress.value = address;
     destinationLatLng.value = point;
     results.clear();
@@ -217,7 +194,6 @@ class TripController extends GetxController {
     await recalculateIfPossible();
   }
 
-  // ---------------- RUTA / DIST / TIEMPO / TARIFA ----------------
   final RxBool isCalculating = false.obs;
   final RxDouble distanceKm = 0.0.obs;
   final RxInt durationMin = 0.obs;
@@ -228,51 +204,29 @@ class TripController extends GetxController {
   double perKm = 0.60;
   double perMin = 0.05;
 
-  // ---------------- CATEGORIA / OFERTA ----------------
   final Rx<TripCategory> selectedCategory = TripCategory.normal.obs;
   final RxDouble priceBoost = 0.0.obs;
-
-  // Temporal hasta recibir tarifas por categoria desde backend.
   double vipMultiplier = 1.30;
 
-  static const List<double> priceBoostOptions = <double>[
-    0.0,
-    0.50,
-    1.00,
-    2.00,
-  ];
+  static const List<double> priceBoostOptions = <double>[0.0, 0.50, 1.00, 2.00];
 
   void selectCategory(TripCategory category) {
     if (selectedCategory.value == category) return;
     selectedCategory.value = category;
-
-    // El panel principal observa distancia/tiempo para decidir su estado.
-    // Refrescamos la distancia para forzar su reconstrucción visual y que el
-    // cambio de categoría/precio se refleje inmediatamente.
     distanceKm.refresh();
   }
 
   void setPriceBoost(double amount) {
     if (amount < 0) return;
-
     final next = _roundMoney(amount);
     if (priceBoost.value == next) return;
-
     priceBoost.value = next;
-
-    // La tarifa final es un getter derivado de categoría + extra. Forzamos la
-    // reconstrucción del panel para actualizar chip seleccionado y CTA.
     distanceKm.refresh();
   }
 
   double get normalFare => _roundMoney(estimatedFare.value);
-
   double get vipFare => _roundMoney(estimatedFare.value * vipMultiplier);
-
-  double get categoryFare {
-    return selectedCategory.value == TripCategory.vip ? vipFare : normalFare;
-  }
-
+  double get categoryFare => selectedCategory.value == TripCategory.vip ? vipFare : normalFare;
   double get finalFare => _roundMoney(categoryFare + priceBoost.value);
 
   Future<void> recalculateIfPossible() async {
@@ -281,7 +235,6 @@ class TripController extends GetxController {
     if (origin == null || dest == null) return;
 
     isCalculating.value = true;
-
     try {
       final res = await _geocoder.route(
         origin: origin,
@@ -310,71 +263,76 @@ class TripController extends GetxController {
     }
   }
 
-  double _calcFare(double km, int min) {
-    return _roundMoney(baseFare + (km * perKm) + (min * perMin));
-  }
+  double _calcFare(double km, int min) => _roundMoney(baseFare + (km * perKm) + (min * perMin));
 
-  double _roundMoney(double value) {
-    return (value * 100).roundToDouble() / 100.0;
-  }
+  double _roundMoney(double value) => (value * 100).roundToDouble() / 100.0;
 
   bool get canCreateTrip {
-    final originOk =
-        originLatLng.value != null && originAddress.value.trim().isNotEmpty;
-    final destOk =
-        destinationLatLng.value != null &&
-        destinationAddress.value.trim().isNotEmpty;
+    final originOk = originLatLng.value != null && originAddress.value.trim().isNotEmpty;
+    final destOk = destinationLatLng.value != null && destinationAddress.value.trim().isNotEmpty;
     final routeOk = distanceKm.value > 0 && durationMin.value > 0;
-    final notBusy = status.value == TripStatus.idle;
-    return originOk && destOk && routeOk && !isCalculating.value && notBusy;
+    return originOk && destOk && routeOk && !isCalculating.value && status.value == TripStatus.idle;
   }
 
-  // ---------------- ESTADOS DE CARRERA ----------------
   final Rx<TripStatus> status = TripStatus.idle.obs;
   final Rx<TripModel?> activeTrip = Rx<TripModel?>(null);
-
-  StreamSubscription<TripModel>? _sub;
 
   Future<void> createTrip() async {
     if (!canCreateTrip) return;
 
-    final origin = originLatLng.value!;
-    final dest = destinationLatLng.value!;
+    final user = GlobalMemory.to.user;
+    final clienteId = user?.idPerson;
+    final usuarioId = user?.idUser;
+    final telefono = (user?.cellphone ?? '').trim();
+
+    if (clienteId == null || usuarioId == null || telefono.isEmpty) {
+      status.value = TripStatus.failed;
+      return;
+    }
 
     status.value = TripStatus.creating;
 
-    final model = TripModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      origin: origin,
-      originName: originAddress.value,
-      destination: dest,
-      destinationName: destinationAddress.value,
-      distanceKm: distanceKm.value,
-      durationMin: durationMin.value,
-      fare: finalFare,
-      status: TripStatus.creating,
+    final request = TripRequest(
+      boot: true,
+      telefonoCliente: telefono,
+      clienteId: clienteId,
+      direccionPartida: originAddress.value,
+      estadoCarrera: 'O',
+      unidadId: '0',
+      usuarioId: usuarioId,
     );
 
-    _sub?.cancel();
-    _sub = _sim.stream.listen((trip) {
-      final current = activeTrip.value;
-      if (current == null || trip.id != current.id) return;
-
-      activeTrip.value = trip;
-      status.value = trip.status;
-    });
-
     try {
-      final created = await _sim.createTrip(model);
-      activeTrip.value = created;
-      status.value = created.status;
+      final created = await _tripService.createTrip(request);
+
+      activeTrip.value = TripModel(
+        id: created.idTravelRequest.toString(),
+        origin: originLatLng.value!,
+        originName: created.departureAddress.isNotEmpty
+            ? created.departureAddress
+            : originAddress.value,
+        destination: destinationLatLng.value!,
+        destinationName: created.destinationAddress.isNotEmpty
+            ? created.destinationAddress
+            : destinationAddress.value,
+        distanceKm: created.distanceKm.toDouble() > 0
+            ? created.distanceKm.toDouble()
+            : distanceKm.value,
+        durationMin: created.estimatedTime.inMinutes > 0
+            ? created.estimatedTime.inMinutes
+            : durationMin.value,
+        fare: created.cost.toDouble() > 0 ? created.cost.toDouble() : finalFare,
+        status: TripStatus.searching,
+      );
+
+      status.value = TripStatus.searching;
     } catch (_) {
       status.value = TripStatus.failed;
+      activeTrip.value = null;
     }
   }
 
   void cancelTrip() {
-    _sim.cancelActive();
     status.value = TripStatus.cancelled;
     activeTrip.value = null;
     resetTrip();
@@ -384,15 +342,12 @@ class TripController extends GetxController {
   void resetTrip() {
     destinationAddress.value = '';
     destinationLatLng.value = null;
-
     distanceKm.value = 0;
     durationMin.value = 0;
     routePoints.clear();
     estimatedFare.value = 0;
-
     selectedCategory.value = TripCategory.normal;
     priceBoost.value = 0;
-
     results.clear();
     isSearching.value = false;
     searchCtrl.clear();
@@ -402,7 +357,6 @@ class TripController extends GetxController {
   void onClose() {
     _gpsWorker?.dispose();
     _debounce?.cancel();
-    _sub?.cancel();
     searchCtrl.dispose();
     _geocoder.dispose();
     super.onClose();
