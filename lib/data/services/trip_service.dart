@@ -11,12 +11,10 @@ class TripService {
 
   Future<Trip> createTrip(TripRequest input) async {
     try {
-      final formData = FormData.fromMap({
-        'data': jsonEncode(input.toJson()),
-      });
+      final formData = FormData.fromMap({'data': jsonEncode(input.toJson())});
 
       final response = await _dio.post(
-        '/carreras/crear.carrera',
+        '/crear.carrera',
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
       );
