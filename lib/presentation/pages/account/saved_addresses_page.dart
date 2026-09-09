@@ -63,6 +63,26 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
     }
   }
 
+  Future<void> _editAddress(SavedAddress address) async {
+    final gps = Get.find<GpsService>().currentPosition.value;
+    final initial =
+        address.point ?? gps ?? const LatLng(-0.18065, -78.46783);
+
+    final result = await Get.to(
+      () => TripLocationPickerPage(
+        initialCenter: initial,
+        title: 'Editar dirección',
+        confirmText: 'Actualizar dirección',
+        saveAsUserAddress: true,
+        addressToEdit: address,
+      ),
+    );
+
+    if (result != null && mounted) {
+      await _reload();
+    }
+  }
+
   Future<void> _remove(SavedAddress address) async {
     try {
       await _service.remove(address.id);
@@ -149,13 +169,26 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           ),
                         ),
                       ),
-                      trailing: IconButton(
-                        tooltip: 'Eliminar',
-                        onPressed: () => _remove(address),
-                        icon: const Icon(
-                          Icons.delete_outline_rounded,
-                          color: AppColors.brandRed,
-                        ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Editar',
+                            onPressed: () => _editAddress(address),
+                            icon: const Icon(
+                              Icons.edit_location_alt_outlined,
+                              color: AppColors.brandGreen,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Eliminar',
+                            onPressed: () => _remove(address),
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: AppColors.brandRed,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );

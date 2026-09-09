@@ -4,14 +4,19 @@ import 'package:get/get.dart';
 
 import 'package:app_rtsg_client/data/models/request/login_request.dart';
 import 'package:app_rtsg_client/data/services/auth_service.dart';
+import 'package:app_rtsg_client/data/services/user_service.dart';
 import 'package:app_rtsg_client/global_memory.dart';
 
 class AuthController extends GetxController {
   final AuthService _authService;
+  final UserService _userService;
   final GlobalMemory _memory = GlobalMemory.to;
 
-  AuthController({required AuthService authService})
-      : _authService = authService;
+  AuthController({
+    required AuthService authService,
+    required UserService userService,
+  })  : _authService = authService,
+        _userService = userService;
 
   final RxBool isLoading = false.obs;
   final RxBool isPasswordVisible = false.obs;
@@ -47,18 +52,19 @@ class AuthController extends GetxController {
       }
 
       final token = response.token;
-      final user = response.user;
-
       if (token == null || token.trim().isEmpty) {
         throw Exception('El servidor no devolvió un token de sesión.');
       }
 
-      if (user == null) {
-        throw Exception('El servidor no devolvió los datos del usuario.');
-      }
-
       await _memory.setToken(token);
-      await _memory.setUser(user);
+
+      try {
+        final user = await _userService.getUserByToken();
+        await _memory.setUser(user);
+      } catch (_) {
+        await _memory.logout();
+        rethrow;
+      }
 
       Get.offAllNamed(AppRoutes.DASHBOARD);
     } catch (e) {

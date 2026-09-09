@@ -5,6 +5,45 @@ import 'package:dio/dio.dart';
 class UserService {
   final Dio _dio = ApiClient.dio;
 
+  Future<User> getUserByToken() async {
+    try {
+      final response = await _dio.get('/user.by.token');
+      final raw = response.data;
+
+      if (raw is! Map) {
+        throw Exception('Respuesta de usuario no válida');
+      }
+
+      final body = Map<String, dynamic>.from(raw);
+      if (body['estado'] == false || body['ok'] == false) {
+        throw Exception(
+          (body['observacion'] ??
+                  body['message'] ??
+                  'No se pudo obtener el usuario')
+              .toString(),
+        );
+      }
+
+      dynamic data = body['datos'] ?? body['data'] ?? body['user'] ?? body;
+      if (data is List) {
+        if (data.isEmpty) throw Exception('No se encontró el usuario');
+        data = data.first;
+      }
+      if (data is Map && data['user'] is Map) {
+        data = data['user'];
+      }
+      if (data is! Map) {
+        throw Exception('Datos de usuario no válidos');
+      }
+
+      return User.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (error) {
+      throw Exception(
+        'Error al obtener usuario: ${error.response?.data ?? error.message}',
+      );
+    }
+  }
+
   /// GET: obtiene perfil usando id_person
   Future<User> getProfileByPersonId(int idPerson) async {
     try {
