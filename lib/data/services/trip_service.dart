@@ -41,7 +41,7 @@ class TripService {
   /// {ok, status, message, data}.
   Future<List<Trip>> getUserTrips() async {
     try {
-      final response = await _dio.get('/transport/request/user');
+      final response = await _dio.get('/mostrar.carreras.cliente');
       final body = _asMap(response.data, response.requestOptions);
 
       final api = ApiResponse<List<Trip>>.fromJson(body, _parseTrips);
