@@ -344,6 +344,26 @@ class _ConfirmationContent extends GetView<TripController> {
           onChanged: controller.setPriceBoost,
         ),
         const SizedBox(height: 12),
+        TextField(
+          controller: controller.exactLocationCtrl,
+          enabled: !controller.isCreatingTrip.value,
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
+          maxLength: 180,
+          decoration: InputDecoration(
+            labelText: 'Indicaciones para encontrarte',
+            hintText: 'Ej.: casa de rejas negras, junto a la farmacia',
+            prefixIcon: const Icon(Icons.notes_rounded),
+            filled: true,
+            fillColor: AppColors.inputFill,
+            counterText: '',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         _CompactPaymentTile(onTap: () => _showPaymentOptions(context)),
         if (status != TripStatus.idle && status != TripStatus.creating) ...[
           const SizedBox(height: 12),
