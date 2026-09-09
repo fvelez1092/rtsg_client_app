@@ -344,8 +344,28 @@ class _ConfirmationContent extends GetView<TripController> {
           onChanged: controller.setPriceBoost,
         ),
         const SizedBox(height: 12),
+        TextField(
+          controller: controller.exactLocationCtrl,
+          enabled: !controller.isCreatingTrip.value,
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 2,
+          maxLength: 180,
+          decoration: InputDecoration(
+            labelText: 'Indicaciones para encontrarte',
+            hintText: 'Ej.: casa de rejas negras, junto a la farmacia',
+            prefixIcon: const Icon(Icons.notes_rounded),
+            filled: true,
+            fillColor: AppColors.inputFill,
+            counterText: '',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         _CompactPaymentTile(onTap: () => _showPaymentOptions(context)),
-        if (status != TripStatus.idle) ...[
+        if (status != TripStatus.idle && status != TripStatus.creating) ...[
           const SizedBox(height: 12),
           _StatusCard(
             status: status,
@@ -357,12 +377,15 @@ class _ConfirmationContent extends GetView<TripController> {
           ),
         ],
         const SizedBox(height: 12),
-        if (status == TripStatus.idle)
+        if (status == TripStatus.idle || status == TripStatus.creating)
           SizedBox(
             width: double.infinity,
             height: 56,
             child: FilledButton(
-              onPressed: controller.canCreateTrip ? controller.createTrip : null,
+              onPressed:
+                  !controller.isCreatingTrip.value && controller.canCreateTrip
+                      ? controller.createTrip
+                      : null,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.brandGreen,
                 foregroundColor: AppColors.surface,
@@ -372,13 +395,32 @@ class _ConfirmationContent extends GetView<TripController> {
                   borderRadius: BorderRadius.circular(17),
                 ),
               ),
-              child: Text(
-                '${isReservation ? 'Programar' : 'Solicitar'}  •  \$${controller.finalFare.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              child: controller.isCreatingTrip.value
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 19,
+                          height: 19,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Creando carrera…',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      '${isReservation ? 'Programar' : 'Solicitar'}  •  \$${controller.finalFare.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
             ),
           ),
       ],

@@ -22,9 +22,7 @@ class HomePage extends GetView<HomeController> {
       body: SafeArea(
         child: Obx(() {
           if (controller.isLoading.value && controller.advertisements.isEmpty) {
-            return Center(
-              child: CircularProgressIndicator(color: colors.primary),
-            );
+            return const _HomeSkeleton();
           }
 
           if (controller.hasError.value && controller.advertisements.isEmpty) {
@@ -591,6 +589,89 @@ class _PartnerCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 30),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SkeletonBox(width: 92, height: 13),
+                  SizedBox(height: 9),
+                  _SkeletonBox(width: 210, height: 25),
+                ],
+              ),
+            ),
+            _SkeletonBox(width: 48, height: 48, radius: 24),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const _SkeletonBox(height: 76),
+        const SizedBox(height: 20),
+        Row(
+          children: List.generate(
+            4,
+            (index) => const Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: _SkeletonBox(height: 92),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 30),
+        const _SkeletonBox(width: 170, height: 21),
+        const SizedBox(height: 14),
+        const _SkeletonBox(height: 210),
+        const SizedBox(height: 30),
+        const _SkeletonBox(width: 145, height: 21),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(child: _SkeletonBox(height: 155)),
+            SizedBox(width: 12),
+            Expanded(child: _SkeletonBox(height: 155)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({
+    this.width = double.infinity,
+    required this.height,
+    this.radius = 16,
+  });
+
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: colors.onSurface.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(radius),
       ),
     );
   }

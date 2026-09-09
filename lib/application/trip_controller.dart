@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:app_rtsg_client/data/models/trip_model.dart';
 import 'package:app_rtsg_client/data/models/trip_status.dart';
 import 'package:app_rtsg_client/data/models/request/trip_request.dart';
+import 'package:app_rtsg_client/data/models/saved_address_model.dart';
 import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:app_rtsg_client/data/services/mapbox_service.dart';
 import 'package:app_rtsg_client/data/services/trip_service.dart';
@@ -26,6 +27,9 @@ class TripController extends GetxController {
   final RxBool isResolvingOrigin = false.obs;
   final RxString originAddress = ''.obs;
   final Rx<LatLng?> originLatLng = Rx<LatLng?>(null);
+  final TextEditingController exactLocationCtrl = TextEditingController();
+  int? selectedOriginAddressId;
+  int? selectedOriginBaseId;
 
   LatLng lastCenter = const LatLng(-0.18065, -78.46783);
   int _originReqId = 0;
@@ -56,8 +60,29 @@ class TripController extends GetxController {
   }
 
   void setOrigin({required String address, required LatLng point}) {
+    selectedOriginAddressId = null;
+    selectedOriginBaseId = null;
+    exactLocationCtrl.clear();
     originAddress.value = address;
     originLatLng.value = point;
+    if (destinationLatLng.value != null) recalculateIfPossible();
+  }
+
+  void setOriginFromSavedAddress(SavedAddress address) {
+    final point = address.point;
+    if (point == null) return;
+
+    _originReqId++;
+    _originWasSelectedManually = true;
+    lastCenter = point;
+    centerLabel.value = address.address;
+    isResolvingOrigin.value = false;
+    originAddress.value = address.address;
+    originLatLng.value = point;
+    selectedOriginAddressId = address.id;
+    selectedOriginBaseId = address.baseId;
+    exactLocationCtrl.text = address.exactLocation;
+
     if (destinationLatLng.value != null) recalculateIfPossible();
   }
 
@@ -276,33 +301,45 @@ class TripController extends GetxController {
 
   final Rx<TripStatus> status = TripStatus.idle.obs;
   final Rx<TripModel?> activeTrip = Rx<TripModel?>(null);
+  final RxBool isCreatingTrip = false.obs;
+  bool _createTripInFlight = false;
 
   Future<void> createTrip() async {
-    if (!canCreateTrip) return;
+    if (_createTripInFlight || !canCreateTrip) return;
 
-    final user = GlobalMemory.to.user;
-    final clienteId = user?.idPerson;
-    final usuarioId = user?.idUser;
-    final telefono = (user?.cellphone ?? '').trim();
-
-    if (clienteId == null || usuarioId == null || telefono.isEmpty) {
-      status.value = TripStatus.failed;
-      return;
-    }
-
-    status.value = TripStatus.creating;
-
-    final request = TripRequest(
-      boot: true,
-      telefonoCliente: telefono,
-      clienteId: clienteId,
-      direccionPartida: originAddress.value,
-      estadoCarrera: 'O',
-      unidadId: '0',
-      usuarioId: usuarioId,
-    );
+    _createTripInFlight = true;
+    isCreatingTrip.value = true;
 
     try {
+      final user = GlobalMemory.to.user;
+      final clienteId = user?.idPerson;
+      final usuarioId = user?.idUser;
+      final telefono = (user?.cellphone ?? '').trim();
+
+      if (clienteId == null || usuarioId == null || telefono.isEmpty) {
+        status.value = TripStatus.failed;
+        return;
+      }
+
+      status.value = TripStatus.creating;
+
+      final origin = originLatLng.value!;
+
+      final request = TripRequest(
+        boot: true,
+        telefonoCliente: telefono,
+        clienteId: clienteId,
+        direccionPartida: originAddress.value,
+        ubicacionExactaCliente: exactLocationCtrl.text.trim(),
+        latitudPartida: origin.latitude,
+        longitudPartida: origin.longitude,
+        personaDireccionId: selectedOriginAddressId,
+        baseId: selectedOriginBaseId,
+        estadoCarrera: 'O',
+        unidadId: '0',
+        usuarioId: usuarioId,
+      );
+
       final created = await _tripService.createTrip(request);
 
       activeTrip.value = TripModel(
@@ -329,6 +366,9 @@ class TripController extends GetxController {
     } catch (_) {
       status.value = TripStatus.failed;
       activeTrip.value = null;
+    } finally {
+      _createTripInFlight = false;
+      isCreatingTrip.value = false;
     }
   }
 
@@ -351,6 +391,9 @@ class TripController extends GetxController {
     results.clear();
     isSearching.value = false;
     searchCtrl.clear();
+    exactLocationCtrl.clear();
+    selectedOriginAddressId = null;
+    selectedOriginBaseId = null;
   }
 
   @override
@@ -358,6 +401,7 @@ class TripController extends GetxController {
     _gpsWorker?.dispose();
     _debounce?.cancel();
     searchCtrl.dispose();
+    exactLocationCtrl.dispose();
     _geocoder.dispose();
     super.onClose();
   }

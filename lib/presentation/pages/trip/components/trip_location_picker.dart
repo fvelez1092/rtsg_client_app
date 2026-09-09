@@ -15,6 +15,7 @@ class TripLocationPickerPage extends StatefulWidget {
   final String title;
   final String confirmText;
   final bool saveAsUserAddress;
+  final SavedAddress? addressToEdit;
 
   const TripLocationPickerPage({
     super.key,
@@ -23,6 +24,7 @@ class TripLocationPickerPage extends StatefulWidget {
     this.title = 'Selecciona una ubicación',
     this.confirmText = 'Confirmar ubicación',
     this.saveAsUserAddress = false,
+    this.addressToEdit,
   });
 
   @override
@@ -34,6 +36,8 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   final MapboxGeocoder _geocoder = MapboxGeocoder();
   final SavedAddressService _savedAddressService = SavedAddressService();
   final TextEditingController _labelController = TextEditingController();
+  final TextEditingController _exactLocationController =
+      TextEditingController();
 
   late LatLng _center;
   String _address = 'Buscando dirección…';
@@ -45,6 +49,10 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   void initState() {
     super.initState();
     _center = widget.initialCenter;
+    _labelController.text = widget.addressToEdit?.label ?? '';
+    _exactLocationController.text =
+        widget.addressToEdit?.exactLocation ?? '';
+    _address = widget.addressToEdit?.address ?? _address;
     _resolve(_center);
   }
 
@@ -52,6 +60,7 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
   void dispose() {
     _geocoder.dispose();
     _labelController.dispose();
+    _exactLocationController.dispose();
     super.dispose();
   }
 
@@ -96,10 +105,20 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
       try {
         await _savedAddressService.save(
           SavedAddress(
+            id: widget.addressToEdit?.id,
+            personId: widget.addressToEdit?.personId,
             label: label,
             address: _address,
+            exactLocation: _exactLocationController.text.trim(),
+            baseId: widget.addressToEdit?.baseId,
             latitude: _center.latitude,
             longitude: _center.longitude,
+            isDefault: widget.addressToEdit?.isDefault ?? false,
+            active: widget.addressToEdit?.active ?? true,
+            city: widget.addressToEdit?.city,
+            province: widget.addressToEdit?.province,
+            country: widget.addressToEdit?.country ?? 'Ecuador',
+            postalCode: widget.addressToEdit?.postalCode,
           ),
         );
       } catch (error) {
@@ -340,6 +359,22 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
                             prefixIcon: const Icon(
                               Icons.bookmark_outline_rounded,
                             ),
+                            filled: true,
+                            fillColor: AppColors.inputFill,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _exactLocationController,
+                          textCapitalization: TextCapitalization.sentences,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            hintText: 'Indicación exacta: puerta, referencia…',
+                            prefixIcon: const Icon(Icons.notes_rounded),
                             filled: true,
                             fillColor: AppColors.inputFill,
                             border: OutlineInputBorder(

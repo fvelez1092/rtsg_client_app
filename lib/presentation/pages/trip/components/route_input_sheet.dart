@@ -108,6 +108,12 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
       return;
     }
 
+    if (_isOrigin) {
+      controller.setOriginFromSavedAddress(address);
+      if (mounted) widget.onClose();
+      return;
+    }
+
     await _applyPoint(point: point, address: address.address);
   }
 
