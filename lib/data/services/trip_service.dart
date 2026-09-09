@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:app_rtsg_client/data/models/request/trip_request.dart';
 import 'package:app_rtsg_client/data/models/response/api_response.dart';
 import 'package:app_rtsg_client/data/models/trips/trip_model.dart';
@@ -9,9 +11,14 @@ class TripService {
 
   Future<Trip> createTrip(TripRequest input) async {
     try {
+      final formData = FormData.fromMap({
+        'data': jsonEncode(input.toJson()),
+      });
+
       final response = await _dio.post(
         '/carreras/crear.carrera',
-        data: input.toJson(),
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
       );
 
       final body = _asMap(response.data, response.requestOptions);

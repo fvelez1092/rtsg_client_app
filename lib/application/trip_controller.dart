@@ -276,33 +276,38 @@ class TripController extends GetxController {
 
   final Rx<TripStatus> status = TripStatus.idle.obs;
   final Rx<TripModel?> activeTrip = Rx<TripModel?>(null);
+  final RxBool isCreatingTrip = false.obs;
+  bool _createTripInFlight = false;
 
   Future<void> createTrip() async {
-    if (!canCreateTrip) return;
+    if (_createTripInFlight || !canCreateTrip) return;
 
-    final user = GlobalMemory.to.user;
-    final clienteId = user?.idPerson;
-    final usuarioId = user?.idUser;
-    final telefono = (user?.cellphone ?? '').trim();
-
-    if (clienteId == null || usuarioId == null || telefono.isEmpty) {
-      status.value = TripStatus.failed;
-      return;
-    }
-
-    status.value = TripStatus.creating;
-
-    final request = TripRequest(
-      boot: true,
-      telefonoCliente: telefono,
-      clienteId: clienteId,
-      direccionPartida: originAddress.value,
-      estadoCarrera: 'O',
-      unidadId: '0',
-      usuarioId: usuarioId,
-    );
+    _createTripInFlight = true;
+    isCreatingTrip.value = true;
 
     try {
+      final user = GlobalMemory.to.user;
+      final clienteId = user?.idPerson;
+      final usuarioId = user?.idUser;
+      final telefono = (user?.cellphone ?? '').trim();
+
+      if (clienteId == null || usuarioId == null || telefono.isEmpty) {
+        status.value = TripStatus.failed;
+        return;
+      }
+
+      status.value = TripStatus.creating;
+
+      final request = TripRequest(
+        boot: true,
+        telefonoCliente: telefono,
+        clienteId: clienteId,
+        direccionPartida: originAddress.value,
+        estadoCarrera: 'O',
+        unidadId: '0',
+        usuarioId: usuarioId,
+      );
+
       final created = await _tripService.createTrip(request);
 
       activeTrip.value = TripModel(
@@ -329,6 +334,9 @@ class TripController extends GetxController {
     } catch (_) {
       status.value = TripStatus.failed;
       activeTrip.value = null;
+    } finally {
+      _createTripInFlight = false;
+      isCreatingTrip.value = false;
     }
   }
 
