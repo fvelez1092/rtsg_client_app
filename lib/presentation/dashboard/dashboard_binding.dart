@@ -1,6 +1,8 @@
 import 'package:app_rtsg_client/application/dashboard_controller.dart';
+import 'package:app_rtsg_client/application/home_content_controller.dart';
 import 'package:app_rtsg_client/application/home_controller.dart';
-import 'package:app_rtsg_client/data/services/home_services.dart';
+import 'package:app_rtsg_client/data/services/partners_service.dart';
+import 'package:app_rtsg_client/data/services/publicidad_service.dart';
 import 'package:get/get.dart';
 
 class DashboardBinding extends Bindings {
@@ -8,16 +10,20 @@ class DashboardBinding extends Bindings {
   void dependencies() {
     Get.lazyPut<DashboardController>(() => DashboardController(), fenix: true);
 
-    Get.lazyPut<HomeService>(() => HomeService(), fenix: true);
+    Get.lazyPut<PartnersService>(() => PartnersService(), fenix: true);
+    Get.lazyPut<PublicidadService>(() => PublicidadService(), fenix: true);
 
-    Get.lazyPut<HomeController>(
-      () => HomeController(Get.find<HomeService>()),
+    Get.lazyPut<HomeContentController>(
+      () => HomeContentController(
+        partnersService: Get.find<PartnersService>(),
+        publicidadService: Get.find<PublicidadService>(),
+      ),
       fenix: true,
     );
 
-    // Después se registran los demás:
-    // Get.lazyPut<ActivityController>(() => ActivityController());
-    // Get.lazyPut<WalletController>(() => WalletController());
-    // Get.lazyPut<ProfileController>(() => ProfileController());
+    Get.lazyPut<HomeController>(
+      () => HomeController(Get.find<HomeContentController>()),
+      fenix: true,
+    );
   }
 }
