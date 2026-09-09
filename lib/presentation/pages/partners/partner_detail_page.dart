@@ -302,6 +302,28 @@ class _PartnerDetailData {
   final double? longitude;
 
   factory _PartnerDetailData.from(dynamic source) {
+    if (source is Map) {
+      final advertisement = source['advertisement'];
+      final partner = source['partner'];
+
+      if (advertisement is PartnerAdModel) {
+        return _PartnerDetailData(
+          name: advertisement.partnerName,
+          category: 'Beneficio destacado',
+          description: advertisement.description,
+          offer: advertisement.title,
+          imageUrl: advertisement.imageUrl,
+          rating: advertisement.rating > 0
+              ? advertisement.rating.toStringAsFixed(1)
+              : partner is PartnerModel
+                  ? partner.rating.toStringAsFixed(1)
+                  : '4.9',
+          latitude: partner is PartnerModel ? partner.latitude : null,
+          longitude: partner is PartnerModel ? partner.longitude : null,
+        );
+      }
+    }
+
     if (source is PartnerAdModel) {
       return _PartnerDetailData(
         name: source.partnerName,

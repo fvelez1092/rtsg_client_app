@@ -29,7 +29,10 @@ class DashboardBinding extends Bindings {
     );
 
     Get.lazyPut<HomeController>(
-      () => HomeController(Get.find<HomeContentController>()),
+      () => HomeController(
+        Get.find<HomeContentController>(),
+        Get.find<TripsController>(),
+      ),
       fenix: true,
     );
   }

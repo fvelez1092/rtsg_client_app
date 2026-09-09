@@ -146,7 +146,7 @@ class PartnerAdModel {
       partnerName:
           (json['nombre_comercio'] ?? json['partner_name'] ?? '').toString(),
       actionUrl: (json['enlace'] ?? json['action_url'])?.toString(),
-      partnerId: _asNullableInt(json['partner_id']),
+      partnerId: _asNullableInt(json['partner_id'] ?? json['id_partner']),
       logoUrl: (json['logo'] ?? '').toString(),
       actionType: (json['tipo_accion'] ?? 'NINGUNA').toString(),
       priority: _asInt(json['prioridad']),

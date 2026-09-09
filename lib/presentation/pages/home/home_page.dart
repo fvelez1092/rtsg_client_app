@@ -1,11 +1,13 @@
 import 'package:app_rtsg_client/application/home_controller.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
+import 'package:app_rtsg_client/data/models/trips/trip_model.dart';
 import 'package:app_rtsg_client/presentation/pages/home/components/partner_add_card.dart';
 import 'package:app_rtsg_client/presentation/pages/home/components/service_option_card.dart';
 import 'package:app_rtsg_client/presentation/widgets/main_bottom_navigation.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends GetView<HomeController> {
   const HomePage({super.key});
@@ -259,10 +261,18 @@ class HomePage extends GetView<HomeController> {
 
                 return PartnerAdCard(
                   advertisement: advertisement,
-                  onTap: () => Get.toNamed(
-                    AppRoutes.PARTNER_DETAIL,
-                    arguments: advertisement,
-                  ),
+                  onTap: () {
+                    final partner =
+                        controller.partnerForAdvertisement(advertisement);
+
+                    Get.toNamed(
+                      AppRoutes.PARTNER_DETAIL,
+                      arguments: {
+                        'advertisement': advertisement,
+                        'partner': partner,
+                      },
+                    );
+                  },
                 );
               },
             ),
@@ -358,6 +368,7 @@ class HomePage extends GetView<HomeController> {
   Widget _buildRecentActivity(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final trip = controller.latestTrip;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
@@ -389,6 +400,7 @@ class HomePage extends GetView<HomeController> {
               onTap: () => Get.offNamed(AppRoutes.ACTIVITY),
               borderRadius: BorderRadius.circular(20),
               child: Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
@@ -396,62 +408,101 @@ class HomePage extends GetView<HomeController> {
                     color: colors.onSurface.withValues(alpha: 0.10),
                   ),
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: colors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            Icons.directions_car_rounded,
-                            color: colors.primary,
-                          ),
+                child: controller.tripsLoading.value && trip == null
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          child: CircularProgressIndicator(),
                         ),
-                        const SizedBox(width: 13),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'La Carolina → Centro Histórico',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Hoy · 09:42 · 6.8 km',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Text(
-                          r'$4.80',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      )
+                    : trip == null
+                        ? const _NoRecentTrips()
+                        : _RecentTrip(trip: trip),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+}
+
+class _RecentTrip extends StatelessWidget {
+  const _RecentTrip({required this.trip});
+
+  final Trip trip;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final origin = trip.departureAddress.isEmpty
+        ? 'Origen no disponible'
+        : trip.departureAddress;
+    final destination = trip.destinationAddress.isEmpty
+        ? 'Destino no disponible'
+        : trip.destinationAddress;
+    final date = DateFormat('dd MMM · HH:mm', 'es').format(trip.requestedDate);
+
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(Icons.directions_car_rounded, color: colors.primary),
+        ),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$origin → $destination',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$date · ${trip.distanceKm.toStringAsFixed(1)} km',
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          Trip.priceLabel(trip),
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoRecentTrips extends StatelessWidget {
+  const _NoRecentTrips();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Icon(Icons.route_outlined, color: Colors.grey),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Aún no tienes viajes registrados.',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
     );
   }
 }
