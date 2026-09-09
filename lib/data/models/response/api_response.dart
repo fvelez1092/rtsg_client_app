@@ -15,11 +15,27 @@ class ApiResponse<T> {
     Map<String, dynamic> json,
     T Function(dynamic raw) convert,
   ) {
+    final successRaw = json.containsKey('estado') ? json['estado'] : json['ok'];
+    final ok = _asBool(successRaw);
+
     return ApiResponse<T>(
-      ok: json['ok'] as bool,
-      status: json['status'] as int,
-      message: (json['message'] ?? '') as String,
-      data: convert(json['data']),
+      ok: ok,
+      status: _asInt(json['status'], fallback: ok ? 200 : 400),
+      message: (json['observacion'] ?? json['message'] ?? '').toString(),
+      data: convert(json.containsKey('datos') ? json['datos'] : json['data']),
     );
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final normalized = value?.toString().trim().toLowerCase();
+    return normalized == 'true' || normalized == '1';
+  }
+
+  static int _asInt(dynamic value, {required int fallback}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 }
