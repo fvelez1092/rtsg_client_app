@@ -30,6 +30,7 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     currentUser.value = _globalMemory.user;
+    addresses.assignAll(currentUser.value?.addresses ?? const []);
     loadAddresses();
   }
 

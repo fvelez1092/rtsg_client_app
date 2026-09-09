@@ -159,6 +159,9 @@ bool _looksLikeDirectUser(Map<String, dynamic> json) {
       json.containsKey('id_user') ||
       json.containsKey('idpersona') ||
       json.containsKey('id_person') ||
+      json.containsKey('id_persona') ||
+      json.containsKey('usuarioid') ||
+      json.containsKey('razon_social') ||
       json.containsKey('nombres_usuario') ||
       json.containsKey('usuario');
 }

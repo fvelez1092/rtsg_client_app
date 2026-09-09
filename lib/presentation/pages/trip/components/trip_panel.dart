@@ -284,9 +284,11 @@ class _ConfirmationContent extends GetView<TripController> {
 
   @override
   Widget build(BuildContext context) {
-    final status = controller.status.value;
+    return Obx(() {
+      final status = controller.status.value;
+      final isCreating = controller.isCreatingTrip.value;
 
-    return Column(
+      return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -346,7 +348,7 @@ class _ConfirmationContent extends GetView<TripController> {
         const SizedBox(height: 12),
         TextField(
           controller: controller.exactLocationCtrl,
-          enabled: !controller.isCreatingTrip.value,
+          enabled: !isCreating,
           textCapitalization: TextCapitalization.sentences,
           maxLines: 2,
           maxLength: 180,
@@ -383,7 +385,7 @@ class _ConfirmationContent extends GetView<TripController> {
             height: 56,
             child: FilledButton(
               onPressed:
-                  !controller.isCreatingTrip.value && controller.canCreateTrip
+                  !isCreating && controller.canCreateTrip
                       ? controller.createTrip
                       : null,
               style: FilledButton.styleFrom(
@@ -395,7 +397,7 @@ class _ConfirmationContent extends GetView<TripController> {
                   borderRadius: BorderRadius.circular(17),
                 ),
               ),
-              child: controller.isCreatingTrip.value
+              child: isCreating
                   ? const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -423,8 +425,9 @@ class _ConfirmationContent extends GetView<TripController> {
                     ),
             ),
           ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }
 
