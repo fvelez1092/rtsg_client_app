@@ -14,7 +14,6 @@ class Trip {
   final int? luggageCount;
   final num cost;
   final String notes;
-  // final String status;
   final TripStatus status;
   final DateTime createdAt;
   final int passengerId;
@@ -23,7 +22,7 @@ class Trip {
   final String? cellular;
   final String email;
   final int travelCategoryId;
-  final String name; // nombre de la categoría (ej. VIP 1)
+  final String name;
   final String description;
   final int routeId;
   final String route;
@@ -63,50 +62,82 @@ class Trip {
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
+    final requestedDate = _date(
+      json['requested_date'] ?? json['fecha_solicitud'] ?? json['fecha'],
+    );
+    final createdAt = _date(
+      json['created_at'] ?? json['fecha_registro'],
+      fallback: requestedDate,
+    );
+
     return Trip(
-      idTravelRequest: json['id_travel_request'] as int,
-      tripId: json['trip_id'] as int?,
-      requestedDate: DateTime.parse(json['requested_date'] as String),
-      departureAddress: (json['departure_address'] ?? '') as String,
-      destinationAddress: (json['destination_address'] ?? '') as String,
-      departureCoords: json['departure_coords'] as String?,
-      destinationCoords: json['destination_coords'] as String?,
-      passengerCount: (json['passenger_count'] ?? 0) as int,
-      luggageCount: (json['luggage_count'] ?? 0) as int?,
-      cost: json['cost'] as num,
-      notes: (json['notes'] ?? '') as String,
-      status: _statusFrom(json['status']),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      passengerId: json['passenger_id'] as int,
-      passenger: (json['passenger'] ?? '') as String,
-      nip: (json['nip'] ?? '') as String,
-      cellular: json['cellular'] as String?,
-      email: ((json['email'] ?? '') as String).replaceAll(',', '.'),
-      travelCategoryId: json['travel_category_id'] as int,
-      name: (json['name'] ?? '') as String,
-      description: (json['description'] ?? '') as String,
-      routeId: json['route_id'] as int,
-      route: (json['route'] ?? '') as String,
-      distanceKm: json['distance_km'] as num,
-      estimatedTime: _parseHMS(json['estimated_time'] as String),
-      baseFare: json['base_fare'] as num,
-      nameUser: (json['name_user'] ?? '') as String,
+      idTravelRequest: _int(
+        json['id_travel_request'] ?? json['id_solicitud'] ?? json['id'],
+      ),
+      tripId: _nullableInt(json['trip_id'] ?? json['id_viaje']),
+      requestedDate: requestedDate,
+      departureAddress: _string(
+        json['departure_address'] ?? json['direccion_origen'],
+      ),
+      destinationAddress: _string(
+        json['destination_address'] ?? json['direccion_destino'],
+      ),
+      departureCoords: _nullableString(
+        json['departure_coords'] ?? json['coordenadas_origen'],
+      ),
+      destinationCoords: _nullableString(
+        json['destination_coords'] ?? json['coordenadas_destino'],
+      ),
+      passengerCount: _int(json['passenger_count'], fallback: 1),
+      luggageCount: _nullableInt(json['luggage_count']),
+      cost: _num(json['cost'] ?? json['costo']),
+      notes: _string(json['notes'] ?? json['observacion']),
+      status: _statusFrom(json['status'] ?? json['estado_viaje']),
+      createdAt: createdAt,
+      passengerId: _int(json['passenger_id'] ?? json['pasajero_id']),
+      passenger: _string(json['passenger'] ?? json['pasajero']),
+      nip: _string(json['nip']),
+      cellular: _nullableString(json['cellular'] ?? json['celular']),
+      email: _string(json['email'] ?? json['correo']).replaceAll(',', '.'),
+      travelCategoryId: _int(
+        json['travel_category_id'] ?? json['categoria_viaje_id'],
+      ),
+      name: _string(json['name'] ?? json['categoria']),
+      description: _string(json['description'] ?? json['descripcion']),
+      routeId: _int(json['route_id'] ?? json['ruta_id']),
+      route: _string(json['route'] ?? json['ruta']),
+      distanceKm: _num(json['distance_km'] ?? json['distancia_km']),
+      estimatedTime: _duration(
+        json['estimated_time'] ?? json['tiempo_estimado'],
+      ),
+      baseFare: _num(json['base_fare'] ?? json['tarifa_base']),
+      nameUser: _string(json['name_user'] ?? json['nombre_usuario']),
     );
   }
 
-  static Duration _parseHMS(String hms) {
-    // Formato esperado "HH:MM:SS"
-    final parts = hms.split(':').map(int.parse).toList();
-    final h = parts.isNotEmpty ? parts[0] : 0;
-    final m = parts.length > 1 ? parts[1] : 0;
-    final s = parts.length > 2 ? parts[2] : 0;
-    return Duration(hours: h, minutes: m, seconds: s);
+  static Duration _duration(dynamic value) {
+    if (value == null) return Duration.zero;
+    if (value is num) return Duration(seconds: value.toInt());
+
+    final text = value.toString().trim();
+    if (text.isEmpty) return Duration.zero;
+
+    final parts = text.split(':');
+    if (parts.length >= 2) {
+      final h = int.tryParse(parts[0]) ?? 0;
+      final m = int.tryParse(parts[1]) ?? 0;
+      final secondsPart = parts.length > 2 ? parts[2].split('.').first : '0';
+      final s = int.tryParse(secondsPart) ?? 0;
+      return Duration(hours: h, minutes: m, seconds: s);
+    }
+
+    final seconds = int.tryParse(text);
+    return seconds == null ? Duration.zero : Duration(seconds: seconds);
   }
 
   static TripStatus _statusFrom(dynamic raw) {
     if (raw == null) return TripStatus.pending;
 
-    // Si viene numérico (ej. desde DB): 0..4
     if (raw is num) {
       switch (raw.toInt()) {
         case 0:
@@ -124,7 +155,6 @@ class Trip {
       }
     }
 
-    // Si viene como String
     final v = raw.toString().trim().toLowerCase();
     switch (v) {
       case 'pending':
@@ -143,17 +173,15 @@ class Trip {
       case 'complete':
         return TripStatus.completed;
       case 'cancelled':
-      case 'canceled': // por si acaso
+      case 'canceled':
       case 'cancelado':
         return TripStatus.cancelled;
       default:
-        // fallback para no romper la app si el backend manda algo nuevo
         return TripStatus.pending;
     }
   }
 
-  static String priceLabel(Trip t) =>
-      t.cost != null ? '\$${t.cost!.toStringAsFixed(0)}' : '--';
+  static String priceLabel(Trip t) => '\$${t.cost.toStringAsFixed(2)}';
 
   static Color leftBorder(TripStatus s) {
     switch (s) {
@@ -168,5 +196,37 @@ class Trip {
       case TripStatus.cancelled:
         return const Color(0xFFEF4444);
     }
+  }
+
+  static int _int(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  static int? _nullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  static num _num(dynamic value) {
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static String _string(dynamic value) => value?.toString() ?? '';
+
+  static String? _nullableString(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString();
+    return text.isEmpty ? null : text;
+  }
+
+  static DateTime _date(dynamic value, {DateTime? fallback}) {
+    if (value is DateTime) return value;
+    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    return parsed ?? fallback ?? DateTime.fromMillisecondsSinceEpoch(0);
   }
 }
