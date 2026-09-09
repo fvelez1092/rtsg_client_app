@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
-import 'package:app_rtsg_client/data/services/home_services.dart';
+import 'package:app_rtsg_client/data/services/partners_service.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
 class PartnersPage extends StatefulWidget {
@@ -19,7 +19,7 @@ class _PartnersPageState extends State<PartnersPage> {
   @override
   void initState() {
     super.initState();
-    _partnersFuture = HomeService().getPartners();
+    _partnersFuture = PartnersService().getPartners();
   }
 
   @override
@@ -39,6 +39,38 @@ class _PartnersPageState extends State<PartnersPage> {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.brandGreen),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.storefront_outlined,
+                      size: 42,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No pudimos cargar los partners.',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Intenta nuevamente en unos momentos.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 
@@ -63,18 +95,29 @@ class _PartnersPageState extends State<PartnersPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              ...partners.map(
-                (partner) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _PartnerListCard(
-                    partner: partner,
-                    onTap: () => Get.toNamed(
-                      AppRoutes.PARTNER_DETAIL,
-                      arguments: partner,
+              if (partners.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 36),
+                  child: Center(
+                    child: Text(
+                      'Aún no hay partners disponibles.',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                )
+              else
+                ...partners.map(
+                  (partner) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _PartnerListCard(
+                      partner: partner,
+                      onTap: () => Get.toNamed(
+                        AppRoutes.PARTNER_DETAIL,
+                        arguments: partner,
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           );
         },
@@ -110,34 +153,44 @@ class _PartnerListCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  partner.logoUrl,
-                  width: 92,
-                  height: 92,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 92,
-                    height: 92,
-                    color: AppColors.inputFill,
-                    child: const Icon(
-                      Icons.storefront_outlined,
-                      color: AppColors.brandGreen,
-                    ),
-                  ),
-                ),
+                child: partner.logoUrl.isEmpty
+                    ? _logoFallback()
+                    : Image.network(
+                        partner.logoUrl,
+                        width: 92,
+                        height: 92,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _logoFallback(),
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      partner.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            partner.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        if (partner.verified) ...[
+                          const SizedBox(width: 5),
+                          const Icon(
+                            Icons.verified_rounded,
+                            size: 17,
+                            color: AppColors.brandGreen,
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -173,7 +226,7 @@ class _PartnerListCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: const Text(
-                            'Beneficio RTSG',
+                            'Partner RTSG',
                             style: TextStyle(
                               color: AppColors.brandGreen,
                               fontSize: 11,
@@ -189,6 +242,18 @@ class _PartnerListCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _logoFallback() {
+    return Container(
+      width: 92,
+      height: 92,
+      color: AppColors.inputFill,
+      child: const Icon(
+        Icons.storefront_outlined,
+        color: AppColors.brandGreen,
       ),
     );
   }
