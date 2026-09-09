@@ -29,6 +29,7 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
   final FocusNode _searchFocus = FocusNode();
 
   late RouteSelectMode _mode;
+  List<SavedAddress> _savedAddresses = const <SavedAddress>[];
 
   bool get _isOrigin => _mode == RouteSelectMode.origin;
 
@@ -37,6 +38,7 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
     super.initState();
     _mode = widget.mode;
     controller.openDestinationSheet();
+    _loadSavedAddresses();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _searchFocus.requestFocus();
@@ -47,6 +49,15 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
   void dispose() {
     _searchFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedAddresses() async {
+    try {
+      final addresses = await _savedAddressService.getAll();
+      if (mounted) setState(() => _savedAddresses = addresses);
+    } catch (_) {
+      // La búsqueda de destinos sigue disponible aunque fallen los favoritos.
+    }
   }
 
   void _switchMode(RouteSelectMode mode) {
@@ -86,7 +97,18 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
   }
 
   Future<void> _useSavedAddress(SavedAddress address) async {
-    await _applyPoint(point: address.point, address: address.address);
+    final point = address.point;
+    if (point == null) {
+      Get.snackbar(
+        'Ubicación no disponible',
+        'Esta dirección todavía no tiene coordenadas registradas.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+      );
+      return;
+    }
+
+    await _applyPoint(point: point, address: address.address);
   }
 
   Future<void> _useCurrentLocation() async {
@@ -140,7 +162,7 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final savedAddresses = _savedAddressService.getAll();
+    final savedAddresses = _savedAddresses;
     final height = MediaQuery.sizeOf(context).height;
 
     return SizedBox(

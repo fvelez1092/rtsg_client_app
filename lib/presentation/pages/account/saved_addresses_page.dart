@@ -18,6 +18,8 @@ class SavedAddressesPage extends StatefulWidget {
 class _SavedAddressesPageState extends State<SavedAddressesPage> {
   final SavedAddressService _service = SavedAddressService();
   List<SavedAddress> _addresses = const [];
+  bool _loading = true;
+  String _error = '';
 
   @override
   void initState() {
@@ -25,8 +27,22 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
     _reload();
   }
 
-  void _reload() {
-    setState(() => _addresses = _service.getAll());
+  Future<void> _reload() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = '';
+      });
+    }
+
+    try {
+      final addresses = await _service.getAll();
+      if (mounted) setState(() => _addresses = addresses);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _addAddress() async {
@@ -43,13 +59,22 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
     );
 
     if (result != null && mounted) {
-      _reload();
+      await _reload();
     }
   }
 
   Future<void> _remove(SavedAddress address) async {
-    await _service.remove(address.id);
-    if (mounted) _reload();
+    try {
+      await _service.remove(address.id);
+      await _reload();
+    } catch (error) {
+      Get.snackbar(
+        'No se pudo eliminar',
+        error.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+      );
+    }
   }
 
   @override
@@ -69,9 +94,13 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
         label: const Text('Agregar'),
       ),
       body: SafeArea(
-        child: _addresses.isEmpty
-            ? _EmptyAddresses(onAdd: _addAddress)
-            : ListView.separated(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error.isNotEmpty
+                ? _AddressError(message: _error, onRetry: _reload)
+                : _addresses.isEmpty
+                    ? _EmptyAddresses(onAdd: _addAddress)
+                    : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
                 itemCount: _addresses.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -132,6 +161,51 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                   );
                 },
               ),
+      ),
+    );
+  }
+}
+
+class _AddressError extends StatelessWidget {
+  const _AddressError({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 42,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No se pudieron cargar las direcciones.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: onRetry,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
       ),
     );
   }
