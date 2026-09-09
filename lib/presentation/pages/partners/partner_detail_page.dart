@@ -198,7 +198,8 @@ class PartnerDetailPage extends StatelessWidget {
                 ),
                 const _BenefitLine(
                   icon: Icons.schedule_outlined,
-                  text: 'Beneficio sujeto a disponibilidad del establecimiento.',
+                  text:
+                      'Beneficio sujeto a disponibilidad del establecimiento.',
                 ),
                 const _BenefitLine(
                   icon: Icons.workspace_premium_outlined,
@@ -254,10 +255,7 @@ class _BenefitLine extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                height: 1.4,
-              ),
+              style: const TextStyle(color: AppColors.textPrimary, height: 1.4),
             ),
           ),
         ],
@@ -298,8 +296,8 @@ class _PartnerDetailData {
     if (source is PartnerModel) {
       final offer = switch (source.category.toLowerCase()) {
         'cafetería' => '15% de descuento en bebidas seleccionadas',
-        'supermercado' => '5% de descuento en compras desde $20',
-        'restaurante' => 'Postre de cortesía en consumos desde $25',
+        'supermercado' => '5% de descuento en compras desde \$20',
+        'restaurante' => 'Postre de cortesía en consumos desde \$25',
         _ => 'Beneficio exclusivo para usuarios RTSG',
       };
 

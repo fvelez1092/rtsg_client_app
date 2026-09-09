@@ -17,11 +17,7 @@ class RouteInputSheet extends StatefulWidget {
   final VoidCallback onClose;
   final RouteSelectMode mode;
 
-  const RouteInputSheet({
-    super.key,
-    required this.onClose,
-    required this.mode,
-  });
+  const RouteInputSheet({super.key, required this.onClose, required this.mode});
 
   @override
   State<RouteInputSheet> createState() => _RouteInputSheetState();
@@ -122,9 +118,7 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
     final result = await Get.to<MapPointResult>(
       () => TripLocationPickerPage(
         initialCenter: initial,
-        title: _isOrigin
-            ? 'Ubica el punto de partida'
-            : 'Ubica tu destino',
+        title: _isOrigin ? 'Ubica el punto de partida' : 'Ubica tu destino',
       ),
       transition: Transition.cupertino,
     );
@@ -310,10 +304,8 @@ class _RouteInputSheetState extends State<RouteInputSheet> {
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
                       itemCount: results.length,
-                      separatorBuilder: (_, __) => const Divider(
-                        height: 1,
-                        color: AppColors.borderSoft,
-                      ),
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, color: AppColors.borderSoft),
                       itemBuilder: (context, index) {
                         final item = results[index];
                         return _ResultTile(
@@ -422,7 +414,7 @@ class _LocationField extends StatelessWidget {
         onTap: active ? null : onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          minHeight: 60,
+          constraints: const BoxConstraints(minHeight: 60),
           padding: const EdgeInsets.only(left: 15, right: 6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -613,10 +605,7 @@ class _ActionTile extends StatelessWidget {
         subtitle,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 12,
-        ),
+        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
       ),
     );
   }
