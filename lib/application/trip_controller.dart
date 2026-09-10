@@ -101,6 +101,14 @@ class TripController extends GetxController {
       return;
     }
 
+    // Guarda el punto final inmediatamente e invalida la dirección anterior.
+    // Así nunca se puede crear una carrera mezclando el nuevo centro del mapa
+    // con la dirección o las coordenadas de una selección previa.
+    selectedOriginAddressId = null;
+    selectedOriginBaseId = null;
+    exactLocationCtrl.clear();
+    originLatLng.value = center;
+    originAddress.value = '';
     _resolveOriginAddress(center);
   }
 
@@ -308,6 +316,7 @@ class TripController extends GetxController {
         destOk &&
         routeOk &&
         !isCalculating.value &&
+        !isResolvingOrigin.value &&
         status.value == TripStatus.idle;
   }
 
