@@ -29,15 +29,13 @@ class TripRequest {
 
   Map<String, dynamic> toJson() {
     return {
+      'origen': 'M',
       'boot': boot,
       'telefonocliente': telefonoCliente,
       'clienteid': clienteId,
       'direccionpartida': direccionPartida,
       'ubicacionexactacliente': ubicacionExactaCliente,
-      'coordenadaspartida': {
-        'lat': latitudPartida,
-        'long': longitudPartida,
-      },
+      'coordenadaspartida': {'lat': latitudPartida, 'long': longitudPartida},
       if (personaDireccionId != null)
         'persona_direccion_id': personaDireccionId,
       if (baseId != null) 'baseid': baseId,

@@ -1,6 +1,7 @@
 abstract class ApiConstants {
   //static const String baseUrl = 'https://api.manporcar26.com.ec/api/';
-  static const String baseUrl = 'https://3xx44gt9-3001.use.devtunnels.ms/api/';
+  //static const String baseUrl = 'https://3xx44gt9-3001.use.devtunnels.ms/api/';
+  static const String baseUrl = 'https://ztfd48x3-3001.use2.devtunnels.ms/api/';
   static const String mapboxBaseUrl = 'api.mapbox.com';
   static const String mapboxGeocodingPath = '/geocoding/v5/mapbox.places';
 
@@ -11,7 +12,7 @@ abstract class ApiConstants {
   /// Tipos priorizados (puedes ajustar según tu caso)
   static const String mapboxTypes = 'address,place,locality,neighborhood,poi';
   static const String mapboxAccessToken =
-      "pk.eyJ1IjoiY2VpYm9jb2RldGVjaCIsImEiOiJjbWtoM3E3eW0wZW5pM3BxMGIzOGQ5dm92In0.o2tWBoUaFRYIlo8tX_bu9A";
+      "sk.eyJ1IjoiY2FjaWN1c3RlY2giLCJhIjoiY210dWlzZ2oxMGM4MjJ4cHhvM2ppZXpyaSJ9.DGM2_q-eT0uuKerJxLGkPQ";
 
   static const String versionAPI = "v3";
   static const int connectTimeout = 30000;

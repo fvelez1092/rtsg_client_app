@@ -9,9 +9,29 @@ import 'package:dio/dio.dart';
 class TripService {
   final Dio _dio = ApiClient.dio;
 
-  Future<Trip> createTrip(TripRequest input) async {
+  Future<Trip> createTrip(TripRequest input, {String? audioPath}) async {
     try {
-      final formData = FormData.fromMap({'data': jsonEncode(input.toJson())});
+      // 1. Envolvemos el objeto entero en la llave 'data' y lo convertimos a String
+      final Map<String, dynamic> mapData = {
+        'data': jsonEncode({'data': input.toJson()}),
+      };
+
+      // 2. Condicionamos el audio
+      if (audioPath != null && audioPath.isNotEmpty) {
+        // Si hay ruta, enviamos el archivo
+        mapData['audio'] = await MultipartFile.fromFile(
+          audioPath,
+          filename: audioPath.split('/').last,
+        );
+      } else {
+        // Si NO hay ruta, forzamos el envío de la variable 'audio' para que el backend
+        // detecte que llegó, pero vacía/nula.
+        // (Dio enviará el texto "null", que el backend lee como nulo)
+        mapData['audio'] = 'null';
+      }
+
+      // 3. Generamos el form data
+      final formData = FormData.fromMap(mapData);
 
       final response = await _dio.post(
         '/crear.carrera',

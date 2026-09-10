@@ -21,7 +21,7 @@ class TripController extends GetxController {
   final TripService _tripService = Get.find<TripService>();
 
   TripController({MapboxGeocoder? geocoder})
-      : _geocoder = geocoder ?? MapboxGeocoder();
+    : _geocoder = geocoder ?? MapboxGeocoder();
 
   final RxString centerLabel = 'Buscando ubicación…'.obs;
   final RxBool isResolvingOrigin = false.obs;
@@ -211,7 +211,10 @@ class TripController extends GetxController {
     await recalculateIfPossible();
   }
 
-  Future<void> setDestination({required String address, required LatLng point}) async {
+  Future<void> setDestination({
+    required String address,
+    required LatLng point,
+  }) async {
     destinationAddress.value = address;
     destinationLatLng.value = point;
     results.clear();
@@ -251,7 +254,8 @@ class TripController extends GetxController {
 
   double get normalFare => _roundMoney(estimatedFare.value);
   double get vipFare => _roundMoney(estimatedFare.value * vipMultiplier);
-  double get categoryFare => selectedCategory.value == TripCategory.vip ? vipFare : normalFare;
+  double get categoryFare =>
+      selectedCategory.value == TripCategory.vip ? vipFare : normalFare;
   double get finalFare => _roundMoney(categoryFare + priceBoost.value);
 
   Future<void> recalculateIfPossible() async {
@@ -288,15 +292,23 @@ class TripController extends GetxController {
     }
   }
 
-  double _calcFare(double km, int min) => _roundMoney(baseFare + (km * perKm) + (min * perMin));
+  double _calcFare(double km, int min) =>
+      _roundMoney(baseFare + (km * perKm) + (min * perMin));
 
   double _roundMoney(double value) => (value * 100).roundToDouble() / 100.0;
 
   bool get canCreateTrip {
-    final originOk = originLatLng.value != null && originAddress.value.trim().isNotEmpty;
-    final destOk = destinationLatLng.value != null && destinationAddress.value.trim().isNotEmpty;
+    final originOk =
+        originLatLng.value != null && originAddress.value.trim().isNotEmpty;
+    final destOk =
+        destinationLatLng.value != null &&
+        destinationAddress.value.trim().isNotEmpty;
     final routeOk = distanceKm.value > 0 && durationMin.value > 0;
-    return originOk && destOk && routeOk && !isCalculating.value && status.value == TripStatus.idle;
+    return originOk &&
+        destOk &&
+        routeOk &&
+        !isCalculating.value &&
+        status.value == TripStatus.idle;
   }
 
   final Rx<TripStatus> status = TripStatus.idle.obs;
@@ -326,7 +338,7 @@ class TripController extends GetxController {
       final origin = originLatLng.value!;
 
       final request = TripRequest(
-        boot: true,
+        boot: false,
         telefonoCliente: telefono,
         clienteId: clienteId,
         direccionPartida: originAddress.value,
@@ -363,7 +375,7 @@ class TripController extends GetxController {
       );
 
       status.value = TripStatus.searching;
-    } catch (_) {
+    } catch (e) {
       status.value = TripStatus.failed;
       activeTrip.value = null;
     } finally {
