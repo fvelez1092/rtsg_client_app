@@ -13,6 +13,7 @@ import 'package:app_rtsg_client/data/services/mapbox_service.dart';
 import 'package:app_rtsg_client/data/services/trip_service.dart';
 import 'package:app_rtsg_client/data/services/trip_socket_service.dart';
 import 'package:app_rtsg_client/global_memory.dart';
+import 'package:app_rtsg_client/presentation/pages/trip/components/searching_driver_dialog.dart';
 
 enum TripCategory { normal, vip }
 
@@ -23,6 +24,8 @@ class TripController extends GetxController {
   final TripSocketService _tripSocket = Get.find<TripSocketService>();
   StreamSubscription<Map<String, dynamic>>? _assignmentSubscription;
   StreamSubscription<Map<String, dynamic>>? _locationSubscription;
+  Worker? _statusWorker;
+  bool _searchDialogVisible = false;
 
   TripController({MapboxGeocoder? geocoder})
     : _geocoder = geocoder ?? MapboxGeocoder();
@@ -47,6 +50,7 @@ class TripController extends GetxController {
     _assignmentSubscription = _tripSocket.assignments.listen(_onAssignment);
     _locationSubscription = _tripSocket.locations.listen(_onLocation);
     _tripSocket.connect();
+    _statusWorker = ever<TripStatus>(status, _handleStatusChange);
 
     final gpsPos = _gps.currentPosition.value;
     if (gpsPos != null) {
@@ -423,6 +427,22 @@ class TripController extends GetxController {
     // Se filtra aquí para evitar que una carrera ajena actualice la activa.
   }
 
+  void _handleStatusChange(TripStatus nextStatus) {
+    if (nextStatus == TripStatus.searching && !_searchDialogVisible) {
+      _searchDialogVisible = true;
+      Get.dialog<void>(
+        SearchingDriverDialog(onCancel: cancelTrip),
+        barrierDismissible: false,
+      ).whenComplete(() => _searchDialogVisible = false);
+      return;
+    }
+
+    if (nextStatus != TripStatus.searching && _searchDialogVisible) {
+      if (Get.isDialogOpen == true) Get.back<void>();
+      _searchDialogVisible = false;
+    }
+  }
+
   String? _eventTripId(Map<String, dynamic> event) {
     final value = event['carrera_id'] ?? event['carreraId'] ?? event['id'];
     return value?.toString();
@@ -456,6 +476,7 @@ class TripController extends GetxController {
   void onClose() {
     _assignmentSubscription?.cancel();
     _locationSubscription?.cancel();
+    _statusWorker?.dispose();
     _tripSocket.dispose();
     _gpsWorker?.dispose();
     _debounce?.cancel();
