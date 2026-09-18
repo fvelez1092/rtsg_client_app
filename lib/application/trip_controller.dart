@@ -355,7 +355,6 @@ class TripController extends GetxController {
       final origin = originLatLng.value!;
 
       final request = TripRequest(
-        boot: false,
         telefonoCliente: telefono,
         clienteId: clienteId,
         direccionPartida: originAddress.value,

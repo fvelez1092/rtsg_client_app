@@ -1,5 +1,5 @@
 class TripRequest {
-  final bool boot;
+  final String boot;
   final String telefonoCliente;
   final int clienteId;
   final String direccionPartida;
@@ -18,7 +18,7 @@ class TripRequest {
   final double costo;
 
   const TripRequest({
-    required this.boot,
+    this.boot = 'false',
     required this.telefonoCliente,
     required this.clienteId,
     required this.direccionPartida,
