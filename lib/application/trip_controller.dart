@@ -11,6 +11,7 @@ import 'package:app_rtsg_client/data/models/saved_address_model.dart';
 import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:app_rtsg_client/data/services/mapbox_service.dart';
 import 'package:app_rtsg_client/data/services/trip_service.dart';
+import 'package:app_rtsg_client/data/services/trip_socket_service.dart';
 import 'package:app_rtsg_client/global_memory.dart';
 
 enum TripCategory { normal, vip }
@@ -19,6 +20,9 @@ class TripController extends GetxController {
   final MapboxGeocoder _geocoder;
   final GpsService _gps = Get.find<GpsService>();
   final TripService _tripService = Get.find<TripService>();
+  final TripSocketService _tripSocket = Get.find<TripSocketService>();
+  StreamSubscription<Map<String, dynamic>>? _assignmentSubscription;
+  StreamSubscription<Map<String, dynamic>>? _locationSubscription;
 
   TripController({MapboxGeocoder? geocoder})
     : _geocoder = geocoder ?? MapboxGeocoder();
@@ -39,6 +43,10 @@ class TripController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    _assignmentSubscription = _tripSocket.assignments.listen(_onAssignment);
+    _locationSubscription = _tripSocket.locations.listen(_onLocation);
+    _tripSocket.connect();
 
     final gpsPos = _gps.currentPosition.value;
     if (gpsPos != null) {
@@ -359,9 +367,17 @@ class TripController extends GetxController {
         estadoCarrera: 'O',
         unidadId: '0',
         usuarioId: usuarioId,
+        direccionDestino: destinationAddress.value,
+        latitudDestino: destinationLatLng.value!.latitude,
+        longitudDestino: destinationLatLng.value!.longitude,
+        distancia: distanceKm.value,
+        costo: finalFare,
       );
 
       final created = await _tripService.createTrip(request);
+      final carreraId = created.idTravelRequest.toString();
+      _tripSocket.listenForTrip(carreraId);
+      _tripSocket.consultarEstado(carreraId);
 
       activeTrip.value = TripModel(
         id: created.idTravelRequest.toString(),
@@ -393,6 +409,26 @@ class TripController extends GetxController {
     }
   }
 
+  void _onAssignment(Map<String, dynamic> event) {
+    final id = _eventTripId(event);
+    final activeId = activeTrip.value?.id;
+    if (id == null || activeId == null || id != activeId) return;
+    status.value = TripStatus.accepted;
+    activeTrip.value = activeTrip.value!.copyWith(status: TripStatus.accepted);
+  }
+
+  void _onLocation(Map<String, dynamic> event) {
+    final id = _eventTripId(event);
+    if (id == null || id != activeTrip.value?.id) return;
+    // La pantalla de mapa podrá consumir posteriormente esta posición.
+    // Se filtra aquí para evitar que una carrera ajena actualice la activa.
+  }
+
+  String? _eventTripId(Map<String, dynamic> event) {
+    final value = event['carrera_id'] ?? event['carreraId'] ?? event['id'];
+    return value?.toString();
+  }
+
   void cancelTrip() {
     status.value = TripStatus.cancelled;
     activeTrip.value = null;
@@ -419,6 +455,9 @@ class TripController extends GetxController {
 
   @override
   void onClose() {
+    _assignmentSubscription?.cancel();
+    _locationSubscription?.cancel();
+    _tripSocket.dispose();
     _gpsWorker?.dispose();
     _debounce?.cancel();
     searchCtrl.dispose();

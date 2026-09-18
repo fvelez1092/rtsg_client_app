@@ -11,6 +11,11 @@ class TripRequest {
   final String estadoCarrera;
   final String unidadId;
   final int usuarioId;
+  final String direccionDestino;
+  final double latitudDestino;
+  final double longitudDestino;
+  final double distancia;
+  final double costo;
 
   const TripRequest({
     required this.boot,
@@ -25,6 +30,11 @@ class TripRequest {
     required this.estadoCarrera,
     required this.unidadId,
     required this.usuarioId,
+    required this.direccionDestino,
+    required this.latitudDestino,
+    required this.longitudDestino,
+    required this.distancia,
+    required this.costo,
   });
 
   Map<String, dynamic> toJson() {
@@ -36,6 +46,10 @@ class TripRequest {
       'direccionpartida': direccionPartida,
       'ubicacionexactacliente': ubicacionExactaCliente,
       'coordenadaspartida': {'lat': latitudPartida, 'long': longitudPartida},
+      'direcciondestino': direccionDestino,
+      'coordenadasdestino': {'lat': latitudDestino, 'long': longitudDestino},
+      'distancia': distancia,
+      'costo': costo,
       if (personaDireccionId != null)
         'persona_direccion_id': personaDireccionId,
       if (baseId != null) 'baseid': baseId,
