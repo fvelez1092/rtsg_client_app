@@ -84,30 +84,6 @@ class TripService {
     }
   }
 
-  /// Cancela una carrera que todavía está buscando conductor.
-  Future<void> cancelTrip(String carreraId) async {
-    final response = await _dio.put(
-      '/carreras/finalizar.carrera',
-      data: {
-        'carrera_id': carreraId,
-        'estadocarrera': 'C',
-      },
-    );
-
-    final body = _asMap(response.data, response.requestOptions);
-    final success = body['estado'] ?? body['ok'];
-    final ok = success == true || success == 1 || success == '1' || success == 'true';
-
-    if (!ok) {
-      throw DioException(
-        requestOptions: response.requestOptions,
-        response: response,
-        type: DioExceptionType.badResponse,
-        error: (body['observacion'] ?? body['message'] ?? 'No se pudo cancelar la carrera').toString(),
-      );
-    }
-  }
-
   List<Trip> _parseTrips(dynamic raw) {
     if (raw == null) return const <Trip>[];
 
