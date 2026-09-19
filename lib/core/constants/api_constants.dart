@@ -1,7 +1,7 @@
 abstract class ApiConstants {
   //static const String baseUrl = 'https://api.manporcar26.com.ec/api/';
-  //static const String baseUrl = 'https://3xx44gt9-3001.use.devtunnels.ms/api/';
-  static const String baseUrl = 'https://ztfd48x3-3001.use2.devtunnels.ms/api/';
+  static const String baseUrl = 'http://192.168.100.19:3001/api/';
+  //static const String baseUrl = 'https://ztfd48x3-3001.use2.devtunnels.ms/api/';
   static const String mapboxBaseUrl = 'api.mapbox.com';
   static const String mapboxGeocodingPath = '/geocoding/v5/mapbox.places';
 
