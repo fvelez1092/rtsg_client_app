@@ -14,7 +14,6 @@ import 'package:app_rtsg_client/data/services/trip_service.dart';
 import 'package:app_rtsg_client/data/services/trip_socket_service.dart';
 import 'package:app_rtsg_client/global_memory.dart';
 import 'package:app_rtsg_client/presentation/pages/trip/components/searching_driver_dialog.dart';
-import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
 enum TripCategory { normal, vip }
 
@@ -27,7 +26,6 @@ class TripController extends GetxController {
   StreamSubscription<Map<String, dynamic>>? _locationSubscription;
   Worker? _statusWorker;
   bool _searchDialogVisible = false;
-  bool _isCancellingTrip = false;
 
   TripController({MapboxGeocoder? geocoder})
     : _geocoder = geocoder ?? MapboxGeocoder();
@@ -450,32 +448,11 @@ class TripController extends GetxController {
     return value?.toString();
   }
 
-  Future<void> cancelTrip() async {
-    if (_isCancellingTrip) return;
-
-    final tripId = activeTrip.value?.id;
-    if (tripId == null || tripId.isEmpty) return;
-
-    _isCancellingTrip = true;
-    try {
-      await _tripService.cancelTrip(tripId);
-
-      status.value = TripStatus.cancelled;
-      activeTrip.value = null;
-      GlobalMemory.to.hasActiveTrip.value = false;
-      resetTrip();
-
-      if (Get.isDialogOpen == true) Get.back<void>();
-      Get.offAllNamed(AppRoutes.DASHBOARD);
-    } catch (e) {
-      Get.snackbar(
-        'No se pudo cancelar',
-        'Intenta nuevamente en unos segundos.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      _isCancellingTrip = false;
-    }
+  void cancelTrip() {
+    status.value = TripStatus.cancelled;
+    activeTrip.value = null;
+    resetTrip();
+    status.value = TripStatus.idle;
   }
 
   void resetTrip() {
