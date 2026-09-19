@@ -68,7 +68,9 @@ class PartnerAdCard extends StatelessWidget {
               ),
 
               Padding(
-                padding: const EdgeInsets.all(20),
+                // Dejamos un píxel adicional de holgura inferior para evitar
+                // overflow por redondeos de métricas de texto.
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 19),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
