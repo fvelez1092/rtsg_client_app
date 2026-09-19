@@ -63,41 +63,77 @@ class Trip {
 
   factory Trip.fromJson(Map<String, dynamic> json) {
     final requestedDate = _date(
-      json['requested_date'] ?? json['fecha_solicitud'] ?? json['fecha'],
+      json['requested_date'] ??
+          json['fecha_solicitud'] ??
+          json['fecha'] ??
+          json['fecharegistro'],
     );
     final createdAt = _date(
-      json['created_at'] ?? json['fecha_registro'],
+      json['created_at'] ?? json['fecha_registro'] ?? json['fecharegistro'],
       fallback: requestedDate,
     );
 
     return Trip(
       idTravelRequest: _int(
-        json['id_travel_request'] ?? json['id_solicitud'] ?? json['id'],
+        json['id_travel_request'] ??
+            json['id_solicitud'] ??
+            json['idcarrera'] ??
+            json['id_carrera'] ??
+            json['id'],
       ),
-      tripId: _nullableInt(json['trip_id'] ?? json['id_viaje']),
+      tripId: _nullableInt(
+        json['trip_id'] ?? json['id_viaje'] ?? json['idcarrera'],
+      ),
       requestedDate: requestedDate,
       departureAddress: _string(
-        json['departure_address'] ?? json['direccion_origen'],
+        json['departure_address'] ??
+            json['direccion_origen'] ??
+            json['direccionpartida'],
       ),
       destinationAddress: _string(
-        json['destination_address'] ?? json['direccion_destino'],
+        json['destination_address'] ??
+            json['direccion_destino'] ??
+            json['direcciondestino'],
       ),
       departureCoords: _nullableString(
-        json['departure_coords'] ?? json['coordenadas_origen'],
+        json['departure_coords'] ??
+            json['coordenadas_origen'] ??
+            json['coordenadaspartida'],
       ),
       destinationCoords: _nullableString(
-        json['destination_coords'] ?? json['coordenadas_destino'],
+        json['destination_coords'] ??
+            json['coordenadas_destino'] ??
+            json['coordenadasdestino'],
       ),
-      passengerCount: _int(json['passenger_count'], fallback: 1),
+      passengerCount: _int(
+        json['passenger_count'] ?? json['cantidad_pasajeros'],
+        fallback: 1,
+      ),
       luggageCount: _nullableInt(json['luggage_count']),
       cost: _num(json['cost'] ?? json['costo']),
-      notes: _string(json['notes'] ?? json['observacion']),
-      status: _statusFrom(json['status'] ?? json['estado_viaje']),
+      notes: _string(
+        json['notes'] ?? json['observacion'] ?? json['observaciones'],
+      ),
+      status: _statusFrom(
+        json['status'] ?? json['estado_viaje'] ?? json['estadocarrera'],
+      ),
       createdAt: createdAt,
-      passengerId: _int(json['passenger_id'] ?? json['pasajero_id']),
-      passenger: _string(json['passenger'] ?? json['pasajero']),
+      passengerId: _int(
+        json['passenger_id'] ?? json['pasajero_id'] ?? json['clienteid'],
+      ),
+      passenger: _string(
+        json['passenger'] ??
+            json['pasajero'] ??
+            json['nombrecliente'] ??
+            json['razon_social'],
+      ),
       nip: _string(json['nip']),
-      cellular: _nullableString(json['cellular'] ?? json['celular']),
+      cellular: _nullableString(
+        json['cellular'] ??
+            json['celular'] ??
+            json['telefonocelular'] ??
+            json['telefonocliente'],
+      ),
       email: _string(json['email'] ?? json['correo']).replaceAll(',', '.'),
       travelCategoryId: _int(
         json['travel_category_id'] ?? json['categoria_viaje_id'],
@@ -106,9 +142,13 @@ class Trip {
       description: _string(json['description'] ?? json['descripcion']),
       routeId: _int(json['route_id'] ?? json['ruta_id']),
       route: _string(json['route'] ?? json['ruta']),
-      distanceKm: _num(json['distance_km'] ?? json['distancia_km']),
+      distanceKm: _num(
+        json['distance_km'] ??
+            json['distancia_km'] ??
+            json['distancia'],
+      ),
       estimatedTime: _duration(
-        json['estimated_time'] ?? json['tiempo_estimado'],
+        json['estimated_time'] ?? json['tiempo_estimado'] ?? json['tiempo'],
       ),
       baseFare: _num(json['base_fare'] ?? json['tarifa_base']),
       nameUser: _string(json['name_user'] ?? json['nombre_usuario']),
@@ -157,6 +197,11 @@ class Trip {
 
     final v = raw.toString().trim().toLowerCase();
     switch (v) {
+      case 'o':
+      case 'open':
+      case 'abierta':
+      case 'abierto':
+        return TripStatus.pending;
       case 'pending':
       case 'pendiente':
         return TripStatus.pending;
