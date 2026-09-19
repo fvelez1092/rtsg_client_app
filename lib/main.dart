@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:app_rtsg_client/core/theme/light_theme.dart';
 import 'package:app_rtsg_client/data/services/gps_service.dart';
@@ -26,6 +27,7 @@ Future<void> initGlobalServices() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es');
   await initGlobalServices();
   runApp(const RtsgClientApp());
 }
