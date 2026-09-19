@@ -8,7 +8,6 @@ class SplashBinding extends Bindings {
     Get.lazyPut<UserService>(() => UserService(), fenix: true);
     Get.put<SplashController>(
       SplashController(Get.find<UserService>()),
-      permanent: true,
     );
   }
 }

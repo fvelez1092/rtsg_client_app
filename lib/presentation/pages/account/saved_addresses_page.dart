@@ -132,9 +132,15 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: AppColors.borderSoft),
                     ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-                      leading: Container(
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        leading: Container(
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
@@ -150,14 +156,14 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           color: AppColors.brandGreen,
                         ),
                       ),
-                      title: Text(
+                        title: Text(
                         address.label,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      subtitle: Padding(
+                        subtitle: Padding(
                         padding: const EdgeInsets.only(top: 3),
                         child: Text(
                           address.address,
@@ -189,6 +195,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             ),
                           ),
                         ],
+                        ),
                       ),
                     ),
                   );

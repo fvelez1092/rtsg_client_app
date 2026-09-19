@@ -207,11 +207,14 @@ class _AccountOption extends StatelessWidget {
         borderRadius: BorderRadius.circular(17),
         border: Border.all(color: AppColors.borderSoft),
       ),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(17),
-        ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(17),
+        child: ListTile(
+          onTap: onTap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(17),
+          ),
         leading: Container(
           width: 42,
           height: 42,
@@ -221,7 +224,7 @@ class _AccountOption extends StatelessWidget {
           ),
           child: Icon(icon, color: AppColors.brandGreen),
         ),
-        title: Text(
+          title: Text(
           title,
           style: const TextStyle(
             color: AppColors.textPrimary,
@@ -238,6 +241,7 @@ class _AccountOption extends StatelessWidget {
         trailing: const Icon(
           Icons.chevron_right_rounded,
           color: AppColors.textSecondary,
+          ),
         ),
       ),
     );
