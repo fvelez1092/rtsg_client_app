@@ -26,44 +26,47 @@ class LoginPage extends GetView<AuthController> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const AuthHeader(
-                  title: 'RadioTaxi "San Gregorio"',
-                  subtitle: 'Sign in with your email',
+                  title: 'RadioTaxi San Gregorio',
+                  subtitle: 'Ingresa para solicitar tu carrera',
                 ),
                 const SizedBox(height: 18),
 
                 AuthTextField(
                   controller: controller.emailController,
-                  label: 'Email',
-                  icon: Icons.person_outline,
+                  label: 'Correo electrónico',
+                  icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 12),
 
                 AuthPasswordField(
                   controller: controller.passwordController,
-                  label: 'Password',
+                  label: 'Contraseña',
                   isVisible: controller.isPasswordVisible,
                   onToggle: controller.isPasswordVisible.toggle,
                 ),
                 const SizedBox(height: 18),
 
                 AuthPrimaryButton(
-                  text: 'Sign In',
+                  text: 'Iniciar sesión',
                   isLoading: controller.isLoading,
                   onPressed: controller.login,
                 ),
 
                 const SizedBox(height: 10),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     AuthLinkButton(
-                      text: 'Create account',
+                      text: 'Crear cuenta',
                       onTap: () => Get.toNamed(AppRoutes.REGISTER),
                     ),
                     AuthLinkButton(
-                      text: 'Forgot password?',
+                      text: '¿Olvidaste tu contraseña?',
                       onTap: () => Get.toNamed(AppRoutes.FORGOT_PASSWORD),
                     ),
                   ],
