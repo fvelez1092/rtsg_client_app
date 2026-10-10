@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:app_rtsg_client/data/services/user_service.dart';
 import 'package:app_rtsg_client/global_memory.dart';
+import 'package:app_rtsg_client/data/services/push_notification_service.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
 class SplashController extends GetxController {
@@ -30,6 +33,7 @@ class SplashController extends GetxController {
       final user = await _userService.getUserByToken();
       await _memory.setUser(user);
       Get.offAllNamed(AppRoutes.DASHBOARD);
+      unawaited(Get.find<PushNotificationService>().onAuthenticated());
     } catch (_) {
       await _memory.logout();
       Get.offAllNamed(AppRoutes.LOGIN);
