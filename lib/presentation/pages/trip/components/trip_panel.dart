@@ -948,12 +948,6 @@ class _DriverAssignmentCard extends StatelessWidget {
               ],
             ),
           ),
-          if (phone.isNotEmpty)
-            IconButton(
-              tooltip: 'Llamar al conductor',
-              onPressed: () {},
-              icon: const Icon(Icons.phone_rounded, color: AppColors.brandGreen),
-            ),
         ],
       ),
     );
