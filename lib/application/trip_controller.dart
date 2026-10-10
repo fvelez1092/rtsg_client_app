@@ -60,6 +60,14 @@ class TripController extends GetxController {
     _tripSocket.connect();
     _statusWorker = ever<TripStatus>(status, _handleStatusChange);
 
+    final args = Get.arguments;
+    final assignedTripId = args is Map
+        ? int.tryParse((args['assignedTripId'] ?? '').toString())
+        : null;
+    if (assignedTripId != null && assignedTripId > 0) {
+      recoverAssignedTrip(assignedTripId);
+    }
+
     final gpsPos = _gps.currentPosition.value;
     if (gpsPos != null) {
       lastCenter = gpsPos;
@@ -421,6 +429,32 @@ class TripController extends GetxController {
     }
   }
 
+  /// Prepara la misma carrera recibida por la push y la recupera desde el
+  /// servidor. Los datos completos llegan por consultarEstadoCarrera.
+  void recoverAssignedTrip(int tripId) {
+    if (tripId <= 0) return;
+    final id = tripId.toString();
+    if (activeTrip.value?.id == id) {
+      _tripSocket.listenForTrip(id);
+      return;
+    }
+
+    final currentPoint = _gps.currentPosition.value ?? lastCenter;
+    activeTrip.value = TripModel(
+      id: id,
+      origin: currentPoint,
+      originName: '',
+      destination: currentPoint,
+      destinationName: '',
+      distanceKm: 0,
+      durationMin: 0,
+      fare: 0,
+      status: TripStatus.accepted,
+    );
+    status.value = TripStatus.accepted;
+    _tripSocket.listenForTrip(id);
+  }
+
   void _onAssignment(Map<String, dynamic> event) {
     final rawTrip = event['carrera'];
     final trip = rawTrip is Map
@@ -430,20 +464,127 @@ class TripController extends GetxController {
     final activeId = activeTrip.value?.id;
     if (id == null || activeId == null || id != activeId) return;
 
-    final state = (trip['estado'] ?? trip['estadocarrera'] ?? trip['status'] ?? '')
-        .toString()
-        .trim()
-        .toUpperCase();
+    final state =
+        (trip['estado'] ?? trip['estadocarrera'] ?? trip['status'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
     final hasDriver = trip['conductor'] != null ||
         trip['conductor_id'] != null ||
         trip['conductorId'] != null;
     if (state != 'EN_CAMINO' && !hasDriver) return;
 
+    _applyRecoveredTripData(trip);
     status.value = TripStatus.accepted;
     activeTrip.value = activeTrip.value!.copyWith(
       status: TripStatus.accepted,
       assignment: trip,
     );
+  }
+
+  void _applyRecoveredTripData(Map<String, dynamic> trip) {
+    final origin = _readPoint(
+      trip['coordenadaspartida'] ??
+          trip['coordenadas_origen'] ??
+          trip['departure_coords'],
+    ) ??
+        _readPoint({
+          'lat': trip['latitudpartida'] ?? trip['latitud_partida'],
+          'long': trip['longitudpartida'] ??
+              trip['longitud_partida'] ??
+              trip['longitudorigen'],
+        });
+    final destination = _readPoint(
+      trip['coordenadasdestino'] ??
+          trip['coordenadas_destino'] ??
+          trip['destination_coords'],
+    ) ??
+        _readPoint({
+          'lat': trip['latituddestino'] ?? trip['latitud_destino'],
+          'long': trip['longituddestino'] ?? trip['longitud_destino'],
+        });
+
+    if (origin != null) {
+      originLatLng.value = origin;
+      lastCenter = origin;
+    }
+    if (destination != null) destinationLatLng.value = destination;
+
+    final originText = _firstText([
+      trip['direccionpartida'],
+      trip['direccion_origen'],
+      trip['departure_address'],
+    ]);
+    final destinationText = _firstText([
+      trip['direcciondestino'],
+      trip['direccion_destino'],
+      trip['destination_address'],
+    ]);
+    if (originText.isNotEmpty) originAddress.value = originText;
+    if (destinationText.isNotEmpty) destinationAddress.value = destinationText;
+
+    final distance = _asDouble(
+      trip['distancia'] ?? trip['distancia_km'] ?? trip['distance_km'],
+    );
+    if (distance != null && distance > 0) distanceKm.value = distance;
+
+    final duration = _asDouble(
+      trip['duracion_min'] ?? trip['duration_min'] ?? trip['tiempo_minutos'],
+    );
+    if (duration != null && duration > 0) durationMin.value = duration.round();
+
+    final fare = _asDouble(trip['costo'] ?? trip['cost']);
+    if (fare != null && fare > 0) estimatedFare.value = fare;
+  }
+
+  LatLng? _readPoint(dynamic raw) {
+    if (raw is String) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map || decoded is List) return _readPoint(decoded);
+      } catch (_) {
+        final parts = raw.split(',');
+        if (parts.length >= 2) {
+          final lat = _asDouble(parts[0]);
+          final lng = _asDouble(parts[1]);
+          if (lat != null && lng != null) return LatLng(lat, lng);
+        }
+      }
+      return null;
+    }
+    if (raw is List && raw.length >= 2) {
+      final lat = _asDouble(raw[0]);
+      final lng = _asDouble(raw[1]);
+      if (lat != null && lng != null) return LatLng(lat, lng);
+      return null;
+    }
+    if (raw is! Map) return null;
+    final map = Map<String, dynamic>.from(raw);
+    final lat = _asDouble(
+      map['lat'] ?? map['latitude'] ?? map['latitud'],
+    );
+    final lng = _asDouble(
+      map['long'] ??
+          map['lng'] ??
+          map['lon'] ??
+          map['longitude'] ??
+          map['longitud'],
+    );
+    if (lat == null || lng == null) return null;
+    return LatLng(lat, lng);
+  }
+
+  double? _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
+  }
+
+  String _firstText(Iterable<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty && text.toLowerCase() != 'null') return text;
+    }
+    return '';
   }
 
   void _onLocation(Map<String, dynamic> event) {
