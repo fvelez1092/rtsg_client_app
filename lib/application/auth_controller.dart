@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -5,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:app_rtsg_client/data/models/request/login_request.dart';
 import 'package:app_rtsg_client/data/services/auth_service.dart';
 import 'package:app_rtsg_client/data/services/user_service.dart';
+import 'package:app_rtsg_client/data/services/push_notification_service.dart';
 import 'package:app_rtsg_client/global_memory.dart';
 
 class AuthController extends GetxController {
@@ -67,6 +70,7 @@ class AuthController extends GetxController {
       }
 
       Get.offAllNamed(AppRoutes.DASHBOARD);
+      unawaited(Get.find<PushNotificationService>().onAuthenticated());
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -88,6 +92,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> logout() async {
+    Get.find<PushNotificationService>().onSignedOut();
     await _memory.logout();
     Get.offAllNamed(AppRoutes.LOGIN);
   }
