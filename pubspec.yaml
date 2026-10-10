@@ -33,6 +33,7 @@ dependencies:
   image_picker: ^1.2.1
   socket_io_client: ^3.1.2
   intl: ^0.20.2
+  firebase_core: ^4.15.0
 
 dev_dependencies:
   flutter_test:

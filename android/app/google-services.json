@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "517076721221",
+    "project_id": "rtsg-97a02",
+    "storage_bucket": "rtsg-97a02.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:517076721221:android:9159eed151eab93b630d2c",
+        "android_client_info": {
+          "package_name": "com.cacicustech.rtsg"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAD4znR4EVLJgeWgO3UFN8HWAlTNVIU0rE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:517076721221:android:25c002feeb40be4a630d2c",
+        "android_client_info": {
+          "package_name": "com.example.app_rtsg_client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAD4znR4EVLJgeWgO3UFN8HWAlTNVIU0rE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
