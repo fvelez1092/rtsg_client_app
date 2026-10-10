@@ -20,7 +20,64 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
-  log('[FCM] mensaje recibido en segundo plano: ${message.messageId ?? 'sin id'}');
+
+  final tripId = _assignmentTripIdFromData(message.data);
+  if (tripId == null) return;
+
+  final notifications = FlutterLocalNotificationsPlugin();
+  await notifications.initialize(
+    settings: const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    ),
+  );
+  await notifications.show(
+    id: tripId,
+    title: message.notification?.title ?? 'Conductor asignado',
+    body: message.notification?.body ??
+        'Abre RTSG para consultar los datos de tu carrera.',
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'rtsg_trip_updates',
+        'Actualizaciones de carrera',
+        channelDescription: 'Avisos sobre el estado de tus carreras RTSG.',
+        importance: Importance.max,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    ),
+    payload: tripId.toString(),
+  );
+  log('[FCM] asignación mostrada en segundo plano: carrera_id=$tripId');
+}
+
+int? _assignmentTripIdFromData(Map<String, dynamic> source) {
+  var data = Map<String, dynamic>.from(source);
+  final nested = data['data'];
+  if (nested is String) {
+    try {
+      final decoded = jsonDecode(nested);
+      if (decoded is Map) data = {...data, ...Map<String, dynamic>.from(decoded)};
+    } catch (_) {
+      return null;
+    }
+  } else if (nested is Map) {
+    data = {...data, ...Map<String, dynamic>.from(nested)};
+  }
+
+  final type = (data['tipo'] ?? data['type'] ?? data['evento'] ?? data['event'])
+      ?.toString()
+      .trim()
+      .toUpperCase();
+  if (type != 'CONDUCTOR_ASIGNADO') return null;
+
+  final rawId = data['carrera_id'] ?? data['trip_id'];
+  final tripId = int.tryParse(rawId?.toString() ?? '');
+  return tripId != null && tripId > 0 ? tripId : null;
 }
 
 class PushNotificationService extends GetxService {
