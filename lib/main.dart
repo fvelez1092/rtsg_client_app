@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -6,6 +7,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:app_rtsg_client/core/theme/light_theme.dart';
 import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:app_rtsg_client/data/services/local_storage_service.dart';
+import 'package:app_rtsg_client/data/services/push_notification_service.dart';
+import 'package:app_rtsg_client/firebase_options.dart';
 import 'package:app_rtsg_client/global_memory.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
@@ -27,8 +30,18 @@ Future<void> initGlobalServices() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await initializeDateFormatting('es');
   await initGlobalServices();
+
+  final pushNotifications = Get.put<PushNotificationService>(
+    PushNotificationService(),
+    permanent: true,
+  );
+  await pushNotifications.init();
+
   runApp(const RtsgClientApp());
 }
 
