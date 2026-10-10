@@ -377,6 +377,13 @@ class _ConfirmationContent extends GetView<TripController> {
                 ? controller.cancelTrip
                 : null,
           ),
+          if (status == TripStatus.accepted &&
+              controller.activeTrip.value?.assignment != null) ...[
+            const SizedBox(height: 8),
+            _DriverAssignmentCard(
+              assignment: controller.activeTrip.value!.assignment!,
+            ),
+          ],
         ],
         const SizedBox(height: 12),
         if (status == TripStatus.idle || status == TripStatus.creating)
@@ -839,6 +846,113 @@ class _PaymentOptionTile extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
               ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverAssignmentCard extends StatelessWidget {
+  final Map<String, dynamic> assignment;
+
+  const _DriverAssignmentCard({required this.assignment});
+
+  Map<String, dynamic> _nestedMap(dynamic value) =>
+      value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+
+  String _firstText(Iterable<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty && text.toLowerCase() != 'null') return text;
+    }
+    return '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final driver = _nestedMap(assignment['conductor']);
+    final unit = _nestedMap(assignment['unidad']);
+    final driverName = _firstText([
+      driver['nombre'],
+      driver['name'],
+      driver['nombres'],
+      assignment['conductor_nombre'],
+    ]);
+    final phone = _firstText([
+      driver['telefono'],
+      driver['celular'],
+      driver['phone'],
+      assignment['conductor_telefono'],
+    ]);
+    final unitNumber = _firstText([
+      unit['numero'],
+      unit['numero_unidad'],
+      unit['unit_number'],
+      assignment['numero_unidad'],
+    ]);
+    final plate = _firstText([unit['placa'], unit['plate'], assignment['placa']]);
+    final model = _firstText([unit['modelo'], unit['model']]);
+    final unitLabel = [
+      if (unitNumber.isNotEmpty) 'Unidad $unitNumber',
+      if (plate.isNotEmpty) plate,
+      if (model.isNotEmpty) model,
+    ].join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: AppColors.brandGreen.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppColors.brandGreen.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            backgroundColor: AppColors.brandGreen,
+            foregroundColor: Colors.white,
+            child: Icon(Icons.person_rounded),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  driverName.isEmpty ? 'Conductor asignado' : driverName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (unitLabel.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    unitLabel,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                if (phone.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    phone,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (phone.isNotEmpty)
+            IconButton(
+              tooltip: 'Llamar al conductor',
+              onPressed: () {},
+              icon: const Icon(Icons.phone_rounded, color: AppColors.brandGreen),
             ),
         ],
       ),
