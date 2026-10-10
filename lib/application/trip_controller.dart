@@ -24,6 +24,7 @@ class TripController extends GetxController {
   final TripSocketService _tripSocket = Get.find<TripSocketService>();
   StreamSubscription<Map<String, dynamic>>? _assignmentSubscription;
   StreamSubscription<Map<String, dynamic>>? _locationSubscription;
+  StreamSubscription<String>? _socketErrorSubscription;
   Worker? _statusWorker;
   bool _searchDialogVisible = false;
 
@@ -49,6 +50,13 @@ class TripController extends GetxController {
 
     _assignmentSubscription = _tripSocket.assignments.listen(_onAssignment);
     _locationSubscription = _tripSocket.locations.listen(_onLocation);
+    _socketErrorSubscription = _tripSocket.errors.listen((message) {
+      Get.snackbar(
+        'Conexión de carrera',
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    });
     _tripSocket.connect();
     _statusWorker = ever<TripStatus>(status, _handleStatusChange);
 
@@ -379,9 +387,9 @@ class TripController extends GetxController {
 
       final created = await _tripService.createTrip(request);
       final carreraId = created.idTravelRequest.toString();
-      _tripSocket.listenForTrip(carreraId);
-      _tripSocket.consultarEstado(carreraId);
 
+      // Publica la carrera activa antes de consultar al socket: el backend
+      // puede responder inmediatamente con una asignación ya existente.
       activeTrip.value = TripModel(
         id: created.idTravelRequest.toString(),
         origin: originLatLng.value!,
@@ -403,6 +411,7 @@ class TripController extends GetxController {
       );
 
       status.value = TripStatus.searching;
+      _tripSocket.listenForTrip(carreraId);
     } catch (e) {
       status.value = TripStatus.failed;
       activeTrip.value = null;
@@ -413,11 +422,28 @@ class TripController extends GetxController {
   }
 
   void _onAssignment(Map<String, dynamic> event) {
-    final id = _eventTripId(event);
+    final rawTrip = event['carrera'];
+    final trip = rawTrip is Map
+        ? Map<String, dynamic>.from(rawTrip)
+        : event;
+    final id = _eventTripId(trip) ?? _eventTripId(event);
     final activeId = activeTrip.value?.id;
     if (id == null || activeId == null || id != activeId) return;
+
+    final state = (trip['estado'] ?? trip['estadocarrera'] ?? trip['status'] ?? '')
+        .toString()
+        .trim()
+        .toUpperCase();
+    final hasDriver = trip['conductor'] != null ||
+        trip['conductor_id'] != null ||
+        trip['conductorId'] != null;
+    if (state != 'EN_CAMINO' && !hasDriver) return;
+
     status.value = TripStatus.accepted;
-    activeTrip.value = activeTrip.value!.copyWith(status: TripStatus.accepted);
+    activeTrip.value = activeTrip.value!.copyWith(
+      status: TripStatus.accepted,
+      assignment: trip,
+    );
   }
 
   void _onLocation(Map<String, dynamic> event) {
@@ -444,7 +470,12 @@ class TripController extends GetxController {
   }
 
   String? _eventTripId(Map<String, dynamic> event) {
-    final value = event['carrera_id'] ?? event['carreraId'] ?? event['id'];
+    final value = event['carrera_id'] ??
+        event['carreraId'] ??
+        event['id_travel_request'] ??
+        event['idcarrera'] ??
+        event['id_carrera'] ??
+        event['id'];
     return value?.toString();
   }
 
@@ -476,6 +507,7 @@ class TripController extends GetxController {
   void onClose() {
     _assignmentSubscription?.cancel();
     _locationSubscription?.cancel();
+    _socketErrorSubscription?.cancel();
     _statusWorker?.dispose();
     _tripSocket.dispose();
     _gpsWorker?.dispose();
