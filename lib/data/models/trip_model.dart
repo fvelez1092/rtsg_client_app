@@ -13,6 +13,8 @@ class TripModel {
   final double fare;
 
   final TripStatus status;
+  /// Datos vigentes de la asignación enviados por el backend.
+  final Map<String, dynamic>? assignment;
 
   const TripModel({
     required this.id,
@@ -24,9 +26,13 @@ class TripModel {
     required this.durationMin,
     required this.fare,
     required this.status,
+    this.assignment,
   });
 
-  TripModel copyWith({TripStatus? status}) {
+  TripModel copyWith({
+    TripStatus? status,
+    Map<String, dynamic>? assignment,
+  }) {
     return TripModel(
       id: id,
       origin: origin,
@@ -37,6 +43,7 @@ class TripModel {
       durationMin: durationMin,
       fare: fare,
       status: status ?? this.status,
+      assignment: assignment ?? this.assignment,
     );
   }
 }
