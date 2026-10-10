@@ -59,6 +59,23 @@ class AuthService {
     }
   }
 
+  /// Registra el token FCM del dispositivo para el usuario autenticado.
+  Future<void> registerDeviceToken(String deviceToken) async {
+    final token = deviceToken.trim();
+    if (token.isEmpty) return;
+
+    try {
+      await _dio.post(
+        '/register/device',
+        data: {
+          'data': {'device_code': token},
+        },
+      );
+    } on DioException catch (e) {
+      throw Exception(_extractMessage(e));
+    }
+  }
+
   /// 🟡 Crear usuario: pendiente (simulado por ahora)
   Future<void> register({
     required String fullName,
