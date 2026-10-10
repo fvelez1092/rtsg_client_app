@@ -150,7 +150,11 @@ class TripSocketService {
 
         final carrera = result['carrera'];
         if (carrera is Map) {
-          _assignmentController.add(Map<String, dynamic>.from(carrera));
+          // Mantiene el mismo formato que conductorSeleccionado para que el
+          // controlador procese asignaciones en vivo y recuperadas por igual.
+          _assignmentController.add(<String, dynamic>{
+            'carrera': Map<String, dynamic>.from(carrera),
+          });
         }
       },
     );
