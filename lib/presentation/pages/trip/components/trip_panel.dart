@@ -51,6 +51,9 @@ class TripPanel extends GetView<TripController> {
       ),
       child: Obx(() {
         final hasDestination = controller.destinationLatLng.value != null;
+        final hasActiveTrip =
+            controller.activeTrip.value != null &&
+            controller.status.value != TripStatus.idle;
         final calculating = controller.isCalculating.value;
         final hasRoute =
             controller.distanceKm.value > 0 && controller.durationMin.value > 0;
@@ -60,7 +63,12 @@ class TripPanel extends GetView<TripController> {
           padding: const EdgeInsets.fromLTRB(16, 9, 16, 22),
           children: [
             const _Handle(),
-            if (!hasDestination)
+            if (hasActiveTrip)
+              _ConfirmationContent(
+                isReservation: isReservation,
+                reservationLabel: reservationLabel,
+              )
+            else if (!hasDestination)
               _SearchContent(
                 isReservation: isReservation,
                 reservationLabel: reservationLabel,
