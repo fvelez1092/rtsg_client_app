@@ -44,9 +44,16 @@ class ApiInterceptor extends Interceptor {
     handler.next(options);
   }
 
+  bool _isDeviceRegistration(RequestOptions options) {
+    return options.path.toLowerCase().contains('/register/device');
+  }
+
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
+    // FCM es opcional: un rechazo en este endpoint no debe cerrar la sesión
+    // que ya fue validada con /user.by.token.
+    if (err.response?.statusCode == 401 &&
+        !_isDeviceRegistration(err.requestOptions)) {
       LocalStorage().clearData();
       Get.offAllNamed(AppRoutes.LOGIN);
     }
