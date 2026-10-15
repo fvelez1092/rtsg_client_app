@@ -1,3 +1,4 @@
+import 'package:app_rtsg_client/presentation/widgets/active_trip_banner.dart';
 import 'dart:ui' as ui;
 
 import 'package:app_rtsg_client/application/dashboard_controller.dart';
@@ -144,24 +145,31 @@ class DashboardPage extends GetView<DashboardController> {
           duration: const Duration(milliseconds: 210),
           curve: Curves.easeOutCubic,
           padding: EdgeInsets.only(bottom: contentBottomInset),
-          child: IndexedStack(
-            index: controller.selectedIndex.value,
+          child: Column(
             children: [
-              PrimaryScrollController(
-                controller: controller.tabScrollControllers[0],
-                child: const HomePage(),
-              ),
-              PrimaryScrollController(
-                controller: controller.tabScrollControllers[1],
-                child: const ActivityPage(),
-              ),
-              PrimaryScrollController(
-                controller: controller.tabScrollControllers[2],
-                child: const WalletPage(),
-              ),
-              PrimaryScrollController(
-                controller: controller.tabScrollControllers[3],
-                child: const AccountPage(),
+              const ActiveTripBanner(),
+              Expanded(
+                child: IndexedStack(
+                  index: controller.selectedIndex.value,
+                  children: [
+                    NotificationListener<ScrollNotification>(
+                      onNotification: controller.handleTabScroll,
+                      child: const HomePage(),
+                    ),
+                    NotificationListener<ScrollNotification>(
+                      onNotification: controller.handleTabScroll,
+                      child: const ActivityPage(),
+                    ),
+                    NotificationListener<ScrollNotification>(
+                      onNotification: controller.handleTabScroll,
+                      child: const WalletPage(),
+                    ),
+                    NotificationListener<ScrollNotification>(
+                      onNotification: controller.handleTabScroll,
+                      child: const AccountPage(),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -187,9 +195,7 @@ class DashboardPage extends GetView<DashboardController> {
               width: navigationVisible
                   ? expandedNavigationWidth
                   : _collapsedSize,
-              height: navigationVisible
-                  ? _navigationHeight
-                  : _collapsedSize,
+              height: navigationVisible ? _navigationHeight : _collapsedSize,
               decoration: BoxDecoration(
                 color: colors.surface.withValues(
                   alpha: navigationVisible ? 0.84 : 0.90,
@@ -212,20 +218,11 @@ class DashboardPage extends GetView<DashboardController> {
               clipBehavior: Clip.antiAlias,
               child: BackdropFilter(
                 filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 170),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: navigationVisible
-                      ? KeyedSubtree(
-                          key: const ValueKey('full-navigation'),
-                          child: _fullNavigation(context, theme, colors),
-                        )
-                      : KeyedSubtree(
-                          key: const ValueKey('collapsed-navigation'),
-                          child: _collapsedNavigation(colors),
-                        ),
-                ),
+                // El contenedor exterior anima el tamaño y la posición.
+                // Solo una variante permanece montada al cambiar rápidamente.
+                child: navigationVisible
+                    ? _fullNavigation(context, theme, colors)
+                    : _collapsedNavigation(colors),
               ),
             ),
           ),

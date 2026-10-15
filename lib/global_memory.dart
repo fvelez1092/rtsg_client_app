@@ -1,3 +1,4 @@
+import 'package:app_rtsg_client/data/services/active_trip_session.dart';
 import 'package:app_rtsg_client/data/models/user_model.dart';
 import 'package:app_rtsg_client/data/services/local_storage_service.dart';
 import 'package:get/get.dart';
@@ -20,6 +21,7 @@ class GlobalMemory extends GetxController {
   final RxBool hasActiveTrip = false.obs;
 
   Future<void> logout() async {
+    ActiveTripSession.instance.clear();
     await _localStorage.clearData();
     _syncUserContext(null);
     bases.clear();

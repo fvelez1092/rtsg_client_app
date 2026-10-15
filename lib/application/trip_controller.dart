@@ -1,4 +1,9 @@
+import 'package:app_rtsg_client/data/models/trip_number.dart';
+import 'package:app_rtsg_client/application/trips_controller.dart';
+import 'package:app_rtsg_client/data/models/trip_state_contract.dart';
+import 'package:app_rtsg_client/data/services/active_trip_session.dart';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -25,6 +30,7 @@ class TripController extends GetxController {
   StreamSubscription<Map<String, dynamic>>? _assignmentSubscription;
   StreamSubscription<Map<String, dynamic>>? _locationSubscription;
   StreamSubscription<String>? _socketErrorSubscription;
+  StreamSubscription<Map<String, dynamic>>? _stateSubscription;
   Worker? _statusWorker;
   bool _searchDialogVisible = false;
 
@@ -57,8 +63,24 @@ class TripController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
       );
     });
-    _tripSocket.connect();
+    _stateSubscription = _tripSocket.statusUpdates.listen(_onAssignment);
     _statusWorker = ever<TripStatus>(status, _handleStatusChange);
+
+    final savedTrip = ActiveTripSession.instance.trip.value;
+    if (savedTrip != null) {
+      activeTrip.value = savedTrip;
+      originLatLng.value = savedTrip.origin;
+      originAddress.value = savedTrip.originName;
+      destinationLatLng.value = savedTrip.destination;
+      destinationAddress.value = savedTrip.destinationName;
+      lastCenter = savedTrip.origin;
+      driverPosition.value = ActiveTripSession.instance.driverPosition;
+      distanceKm.value = savedTrip.distanceKm;
+      durationMin.value = savedTrip.durationMin;
+      estimatedFare.value = savedTrip.fare;
+      status.value = savedTrip.status;
+      _tripSocket.listenForTrip(savedTrip.id);
+    }
 
     final args = Get.arguments;
     final assignedTripId = args is Map
@@ -69,10 +91,12 @@ class TripController extends GetxController {
     }
 
     final gpsPos = _gps.currentPosition.value;
-    if (gpsPos != null) {
+    if (gpsPos != null && status.value == TripStatus.idle) {
       lastCenter = gpsPos;
       _resolveOriginAddress(gpsPos);
     }
+
+    _tripSocket.connect();
 
     _gpsWorker = ever<LatLng?>(_gps.currentPosition, (pos) {
       if (pos == null ||
@@ -350,6 +374,7 @@ class TripController extends GetxController {
 
   final Rx<TripStatus> status = TripStatus.idle.obs;
   final Rx<TripModel?> activeTrip = Rx<TripModel?>(null);
+  final Rx<LatLng?> driverPosition = Rx<LatLng?>(null);
   final RxBool isCreatingTrip = false.obs;
   bool _createTripInFlight = false;
 
@@ -383,7 +408,7 @@ class TripController extends GetxController {
         longitudPartida: origin.longitude,
         personaDireccionId: selectedOriginAddressId,
         baseId: selectedOriginBaseId,
-        estadoCarrera: 'O',
+        estadoCarrera: 'S',
         unidadId: '0',
         usuarioId: usuarioId,
         direccionDestino: destinationAddress.value,
@@ -439,6 +464,7 @@ class TripController extends GetxController {
       return;
     }
 
+    driverPosition.value = null;
     final currentPoint = _gps.currentPosition.value ?? lastCenter;
     activeTrip.value = TripModel(
       id: id,
@@ -449,56 +475,105 @@ class TripController extends GetxController {
       distanceKm: 0,
       durationMin: 0,
       fare: 0,
+      hasDistance: false,
+      hasFare: false,
       status: TripStatus.accepted,
     );
     status.value = TripStatus.accepted;
+    _rememberActiveTrip();
     _tripSocket.listenForTrip(id);
   }
 
   void _onAssignment(Map<String, dynamic> event) {
     final rawTrip = event['carrera'];
-    final trip = rawTrip is Map
-        ? Map<String, dynamic>.from(rawTrip)
-        : event;
+    final trip = rawTrip is Map ? Map<String, dynamic>.from(rawTrip) : event;
     final id = _eventTripId(trip) ?? _eventTripId(event);
     final activeId = activeTrip.value?.id;
     if (id == null || activeId == null || id != activeId) return;
 
-    final state =
-        (trip['estado'] ?? trip['estadocarrera'] ?? trip['status'] ?? '')
-            .toString()
-            .trim()
-            .toUpperCase();
-    final hasDriver = trip['conductor'] != null ||
+    final decodedStatus = tripStatusFromBackend(trip);
+    final hasState = [
+      'estado_codigo',
+      'estado',
+      'estadocarrera',
+      'estado_carrera',
+      'status',
+    ].any((key) => trip[key] != null);
+    final hasDriver =
+        trip['conductor'] != null ||
         trip['conductor_id'] != null ||
         trip['conductorId'] != null;
-    if (state != 'EN_CAMINO' && !hasDriver) return;
+    final nextStatus =
+        decodedStatus ?? (!hasState && hasDriver ? TripStatus.accepted : null);
+    if (nextStatus == null) return;
+    // Una retransmisión de la asignación no debe reabrir un viaje finalizado.
+    if (status.value == TripStatus.completed) return;
+    const progress = {
+      TripStatus.accepted: 1,
+      TripStatus.arrived: 2,
+      TripStatus.started: 3,
+      TripStatus.completed: 4,
+    };
+    if ((progress[nextStatus] ?? 0) < (progress[status.value] ?? 0)) return;
 
     _applyRecoveredTripData(trip);
-    status.value = TripStatus.accepted;
+    final driver = trip['conductor'];
+    final position =
+        _driverPoint(trip) ??
+        (driver is Map
+            ? _driverPoint(Map<String, dynamic>.from(driver))
+            : null);
+    if (position != null) driverPosition.value = position;
     activeTrip.value = activeTrip.value!.copyWith(
-      status: TripStatus.accepted,
-      assignment: trip,
+      status: nextStatus,
+      origin: originLatLng.value,
+      originName: originAddress.value,
+      destination: destinationLatLng.value,
+      destinationName: destinationAddress.value,
+      distanceKm: tripNumber(
+        trip['distancia'] ?? trip['distancia_km'] ?? trip['distance_km'],
+      ),
+      fare: tripNumber(trip['costo'] ?? trip['cost']),
+      durationMin: durationMin.value > 0 ? durationMin.value : null,
+      hasDistance:
+          tripNumber(
+                trip['distancia'] ??
+                    trip['distancia_km'] ??
+                    trip['distance_km'],
+              ) !=
+              null
+          ? true
+          : null,
+      hasFare: tripNumber(trip['costo'] ?? trip['cost']) != null ? true : null,
+      assignment: {...?activeTrip.value!.assignment, ...trip},
     );
+    status.value = nextStatus;
+    _rememberActiveTrip();
+    if (Get.isRegistered<TripsController>()) {
+      unawaited(Get.find<TripsController>().fetchTrips());
+    }
   }
 
   void _applyRecoveredTripData(Map<String, dynamic> trip) {
-    final origin = _readPoint(
-      trip['coordenadaspartida'] ??
-          trip['coordenadas_origen'] ??
-          trip['departure_coords'],
-    ) ??
+    final origin =
+        _readPoint(
+          trip['coordenadaspartida'] ??
+              trip['coordenadas_origen'] ??
+              trip['departure_coords'],
+        ) ??
         _readPoint({
           'lat': trip['latitudpartida'] ?? trip['latitud_partida'],
-          'long': trip['longitudpartida'] ??
+          'long':
+              trip['longitudpartida'] ??
               trip['longitud_partida'] ??
               trip['longitudorigen'],
         });
-    final destination = _readPoint(
-      trip['coordenadasdestino'] ??
-          trip['coordenadas_destino'] ??
-          trip['destination_coords'],
-    ) ??
+    final destination =
+        _readPoint(
+          trip['coordenadasdestino'] ??
+              trip['coordenadas_destino'] ??
+              trip['destination_coords'],
+        ) ??
         _readPoint({
           'lat': trip['latituddestino'] ?? trip['latitud_destino'],
           'long': trip['longituddestino'] ?? trip['longitud_destino'],
@@ -523,18 +598,18 @@ class TripController extends GetxController {
     if (originText.isNotEmpty) originAddress.value = originText;
     if (destinationText.isNotEmpty) destinationAddress.value = destinationText;
 
-    final distance = _asDouble(
+    final distance = tripNumber(
       trip['distancia'] ?? trip['distancia_km'] ?? trip['distance_km'],
     );
-    if (distance != null && distance > 0) distanceKm.value = distance;
+    if (distance != null) distanceKm.value = distance;
 
     final duration = _asDouble(
       trip['duracion_min'] ?? trip['duration_min'] ?? trip['tiempo_minutos'],
     );
     if (duration != null && duration > 0) durationMin.value = duration.round();
 
-    final fare = _asDouble(trip['costo'] ?? trip['cost']);
-    if (fare != null && fare > 0) estimatedFare.value = fare;
+    final fare = tripNumber(trip['costo'] ?? trip['cost']);
+    if (fare != null) estimatedFare.value = fare;
   }
 
   LatLng? _readPoint(dynamic raw) {
@@ -560,9 +635,7 @@ class TripController extends GetxController {
     }
     if (raw is! Map) return null;
     final map = Map<String, dynamic>.from(raw);
-    final lat = _asDouble(
-      map['lat'] ?? map['latitude'] ?? map['latitud'],
-    );
+    final lat = _asDouble(map['lat'] ?? map['latitude'] ?? map['latitud']);
     final lng = _asDouble(
       map['long'] ??
           map['lng'] ??
@@ -590,11 +663,37 @@ class TripController extends GetxController {
   void _onLocation(Map<String, dynamic> event) {
     final id = _eventTripId(event);
     if (id == null || id != activeTrip.value?.id) return;
-    // La pantalla de mapa podrá consumir posteriormente esta posición.
-    // Se filtra aquí para evitar que una carrera ajena actualice la activa.
+    final position = _driverPoint(event);
+    if (position != null) {
+      driverPosition.value = position;
+      _rememberActiveTrip();
+    }
+  }
+
+  LatLng? _driverPoint(Map<String, dynamic> data) {
+    final point =
+        _readPoint(
+          data['ubicacion'] ??
+              data['coordenadas'] ??
+              data['location'] ??
+              data['posicion'],
+        ) ??
+        _readPoint(data);
+    if (point == null ||
+        !point.latitude.isFinite ||
+        !point.longitude.isFinite ||
+        point.latitude.abs() > 90 ||
+        point.longitude.abs() > 180) {
+      return null;
+    }
+    return point;
   }
 
   void _handleStatusChange(TripStatus nextStatus) {
+    if (nextStatus == TripStatus.completed ||
+        nextStatus == TripStatus.cancelled) {
+      ActiveTripSession.instance.clear();
+    }
     if (nextStatus == TripStatus.searching && !_searchDialogVisible) {
       _searchDialogVisible = true;
       Get.dialog<void>(
@@ -611,7 +710,8 @@ class TripController extends GetxController {
   }
 
   String? _eventTripId(Map<String, dynamic> event) {
-    final value = event['carrera_id'] ??
+    final value =
+        event['carrera_id'] ??
         event['carreraId'] ??
         event['id_travel_request'] ??
         event['idcarrera'] ??
@@ -628,6 +728,8 @@ class TripController extends GetxController {
   }
 
   void resetTrip() {
+    ActiveTripSession.instance.clear();
+    driverPosition.value = null;
     destinationAddress.value = '';
     destinationLatLng.value = null;
     distanceKm.value = 0;
@@ -644,11 +746,40 @@ class TripController extends GetxController {
     selectedOriginBaseId = null;
   }
 
+  void _rememberActiveTrip() {
+    final trip = activeTrip.value;
+    final currentStatus = status.value;
+    if (trip == null ||
+        (currentStatus != TripStatus.accepted &&
+            currentStatus != TripStatus.arrived &&
+            currentStatus != TripStatus.started)) {
+      return;
+    }
+    final session = ActiveTripSession.instance;
+    session.driverPosition = driverPosition.value;
+    session.trip.value = TripModel(
+      id: trip.id,
+      origin: originLatLng.value ?? trip.origin,
+      originName: originAddress.value,
+      destination: destinationLatLng.value ?? trip.destination,
+      destinationName: destinationAddress.value,
+      distanceKm: trip.distanceKm,
+      durationMin: trip.durationMin,
+      fare: trip.fare,
+      hasDistance: trip.hasDistance,
+      hasFare: trip.hasFare,
+      status: currentStatus,
+      assignment: trip.assignment,
+    );
+  }
+
   @override
   void onClose() {
+    _rememberActiveTrip();
     _assignmentSubscription?.cancel();
     _locationSubscription?.cancel();
     _socketErrorSubscription?.cancel();
+    _stateSubscription?.cancel();
     _statusWorker?.dispose();
     _tripSocket.dispose();
     _gpsWorker?.dispose();

@@ -1,3 +1,4 @@
+import '../trip_number.dart';
 import 'dart:ui';
 
 enum TripStatus { pending, verified, inProgress, completed, cancelled }
@@ -13,6 +14,8 @@ class Trip {
   final int passengerCount;
   final int? luggageCount;
   final num cost;
+  final bool hasDistance;
+  final bool hasFare;
   final String notes;
   final TripStatus status;
   final DateTime createdAt;
@@ -42,6 +45,8 @@ class Trip {
     required this.passengerCount,
     this.luggageCount,
     required this.cost,
+    this.hasDistance = true,
+    this.hasFare = true,
     required this.notes,
     required this.status,
     required this.createdAt,
@@ -71,6 +76,11 @@ class Trip {
     final createdAt = _date(
       json['created_at'] ?? json['fecha_registro'] ?? json['fecharegistro'],
       fallback: requestedDate,
+    );
+
+    final fare = tripNumber(json['cost'] ?? json['costo']);
+    final distance = tripNumber(
+      json['distance_km'] ?? json['distancia_km'] ?? json['distancia'],
     );
 
     return Trip(
@@ -110,12 +120,19 @@ class Trip {
         fallback: 1,
       ),
       luggageCount: _nullableInt(json['luggage_count']),
-      cost: _num(json['cost'] ?? json['costo']),
+      cost: fare ?? 0,
+      hasFare: fare != null,
+      hasDistance: distance != null,
       notes: _string(
         json['notes'] ?? json['observacion'] ?? json['observaciones'],
       ),
       status: _statusFrom(
-        json['status'] ?? json['estado_viaje'] ?? json['estadocarrera'],
+        json['estado_codigo'] ??
+            json['status'] ??
+            json['estado_viaje'] ??
+            json['estadocarrera'] ??
+            json['estado_carrera'] ??
+            json['estado'],
       ),
       createdAt: createdAt,
       passengerId: _int(
@@ -142,11 +159,7 @@ class Trip {
       description: _string(json['description'] ?? json['descripcion']),
       routeId: _int(json['route_id'] ?? json['ruta_id']),
       route: _string(json['route'] ?? json['ruta']),
-      distanceKm: _num(
-        json['distance_km'] ??
-            json['distancia_km'] ??
-            json['distancia'],
-      ),
+      distanceKm: distance ?? 0,
       estimatedTime: _duration(
         json['estimated_time'] ?? json['tiempo_estimado'] ?? json['tiempo'],
       ),
@@ -205,14 +218,23 @@ class Trip {
       case 'pending':
       case 'pendiente':
         return TripStatus.pending;
+      case 'e':
+      case 'l':
+      case 'en_camino':
+      case 'cliente_notificado_llegada':
       case 'verified':
       case 'verificado':
         return TripStatus.verified;
+      case 'i':
+      case 'iniciado':
       case 'inprogress':
       case 'in_progress':
       case 'en_progreso':
       case 'enprogreso':
         return TripStatus.inProgress;
+      case 'f':
+      case 'finalizada':
+      case 'finalizado':
       case 'completed':
       case 'completado':
       case 'complete':

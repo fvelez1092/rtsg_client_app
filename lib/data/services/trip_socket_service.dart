@@ -12,11 +12,10 @@ class TripSocketService {
   bool _authenticated = false;
 
   final _assignmentController =
-      StreamController<Map<String, dynamic>>.broadcast();
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
   final _locationController =
       StreamController<Map<String, dynamic>>.broadcast();
-  final _statusController =
-      StreamController<Map<String, dynamic>>.broadcast();
+  final _statusController = StreamController<Map<String, dynamic>>.broadcast();
   final _errorController = StreamController<String>.broadcast();
 
   Stream<Map<String, dynamic>> get assignments => _assignmentController.stream;
@@ -74,7 +73,9 @@ class TripSocketService {
     socket.onConnect((_) => _authenticate());
     socket.onConnectError((error) {
       _authenticated = false;
-      _errorController.add('No se pudo conectar al servicio de carreras: $error');
+      _errorController.add(
+        'No se pudo conectar al servicio de carreras: $error',
+      );
     });
     socket.onError((error) {
       _errorController.add('Error del servicio de carreras: $error');
@@ -88,36 +89,42 @@ class TripSocketService {
     final socket = _socket;
     if (socket == null || !socket.connected) return;
 
-    LocalStorage().getToken().then((token) {
-      if (token == null || token.trim().isEmpty || !socket.connected) {
-        _errorController.add('No hay una sesión válida para autenticar el socket.');
-        return;
-      }
-
-      socket.emitWithAck(
-        'autenticarSocket',
-        {'token': token},
-        ack: (response) {
-          final result = _map(response);
-          if (result['ok'] != true) {
-            _authenticated = false;
+    LocalStorage()
+        .getToken()
+        .then((token) {
+          if (token == null || token.trim().isEmpty || !socket.connected) {
             _errorController.add(
-              (result['error'] ?? 'El servidor rechazó la autenticación del socket.')
-                  .toString(),
+              'No hay una sesión válida para autenticar el socket.',
             );
             return;
           }
 
-          _authenticated = true;
-          final tripId = _activeTripId;
-          if (tripId != null) {
-            _subscribeAndRecover(tripId);
-          }
-        },
-      );
-    }).catchError((Object error) {
-      _errorController.add('No se pudo leer la sesión: $error');
-    });
+          socket.emitWithAck(
+            'autenticarSocket',
+            {'token': token},
+            ack: (response) {
+              final result = _map(response);
+              if (result['ok'] != true) {
+                _authenticated = false;
+                _errorController.add(
+                  (result['error'] ??
+                          'El servidor rechazó la autenticación del socket.')
+                      .toString(),
+                );
+                return;
+              }
+
+              _authenticated = true;
+              final tripId = _activeTripId;
+              if (tripId != null) {
+                _subscribeAndRecover(tripId);
+              }
+            },
+          );
+        })
+        .catchError((Object error) {
+          _errorController.add('No se pudo leer la sesión: $error');
+        });
   }
 
   void listenForTrip(String carreraId) {

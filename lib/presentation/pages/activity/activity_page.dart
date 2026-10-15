@@ -1,3 +1,4 @@
+import 'package:app_rtsg_client/presentation/widgets/trip_metrics.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -51,91 +52,91 @@ class ActivityPage extends GetView<TripsController> {
             RefreshIndicator(
               onRefresh: controller.fetchTrips,
               child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
-            children: [
-              Text(
-                'Tu actividad',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'Historial de viajes realizados con RTSG.',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 22),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.borderSoft),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _Stat(
-                        label: 'Viajes',
-                        value: trips.length.toString(),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 42,
-                      child: VerticalDivider(color: AppColors.borderSoft),
-                    ),
-                    Expanded(
-                      child: _Stat(
-                        label: 'Distancia',
-                        value: '${totalDistance.toStringAsFixed(1)} km',
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 42,
-                      child: VerticalDivider(color: AppColors.borderSoft),
-                    ),
-                    Expanded(
-                      child: _Stat(
-                        label: 'Gastado',
-                        value: '\$${totalSpent.toStringAsFixed(2)}',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Viajes recientes',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (controller.loading.value && trips.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (controller.error.value.isNotEmpty && trips.isEmpty)
-                _ErrorState(
-                  message: controller.error.value,
-                  onRetry: controller.fetchTrips,
-                )
-              else if (trips.isEmpty)
-                const _EmptyState()
-              else
-                ...trips.map(
-                  (trip) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _TripCard(
-                      trip: trip,
-                      statusLabel: _statusLabel(trip.status),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+                children: [
+                  Text(
+                    'Tu actividad',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Historial de viajes realizados con RTSG.',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 22),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.borderSoft),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _Stat(
+                            label: 'Viajes',
+                            value: trips.length.toString(),
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 42,
+                          child: VerticalDivider(color: AppColors.borderSoft),
+                        ),
+                        Expanded(
+                          child: _Stat(
+                            label: 'Distancia',
+                            value: '${totalDistance.toStringAsFixed(1)} km',
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 42,
+                          child: VerticalDivider(color: AppColors.borderSoft),
+                        ),
+                        Expanded(
+                          child: _Stat(
+                            label: 'Gastado',
+                            value: '\$${totalSpent.toStringAsFixed(2)}',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Viajes recientes',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (controller.loading.value && trips.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (controller.error.value.isNotEmpty && trips.isEmpty)
+                    _ErrorState(
+                      message: controller.error.value,
+                      onRetry: controller.fetchTrips,
+                    )
+                  else if (trips.isEmpty)
+                    const _EmptyState()
+                  else
+                    ...trips.map(
+                      (trip) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _TripCard(
+                          trip: trip,
+                          statusLabel: _statusLabel(trip.status),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -184,10 +185,7 @@ class _Stat extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-          ),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
         ),
       ],
     );
@@ -262,31 +260,9 @@ class _TripCard extends StatelessWidget {
           const SizedBox(height: 15),
           const Divider(height: 1, color: AppColors.borderSoft),
           const SizedBox(height: 13),
-          Row(
-            children: [
-              const Icon(
-                Icons.route_outlined,
-                size: 17,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                '${trip.distanceKm.toStringAsFixed(1)} km',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                Trip.priceLabel(trip),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
+          TripMetrics(
+            distanceKm: trip.hasDistance ? trip.distanceKm.toDouble() : null,
+            fare: trip.hasFare ? trip.cost.toDouble() : null,
           ),
         ],
       ),
@@ -402,10 +378,7 @@ class _ErrorState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          OutlinedButton(
-            onPressed: onRetry,
-            child: const Text('Reintentar'),
-          ),
+          OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
         ],
       ),
     );

@@ -2,7 +2,6 @@ import 'package:app_rtsg_client/application/home_content_controller.dart';
 import 'package:app_rtsg_client/application/trips_controller.dart';
 import 'package:app_rtsg_client/data/models/trips/trip_model.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
@@ -10,10 +9,6 @@ class HomeController extends GetxController {
 
   final HomeContentController _contentController;
   final TripsController _tripsController;
-
-  final PageController advertisementsPageController = PageController(
-    viewportFraction: 0.91,
-  );
 
   final RxInt selectedAdvertisementIndex = 0.obs;
 
@@ -59,11 +54,5 @@ class HomeController extends GetxController {
 
   void changeAdvertisement(int index) {
     selectedAdvertisementIndex.value = index;
-  }
-
-  @override
-  void onClose() {
-    advertisementsPageController.dispose();
-    super.onClose();
   }
 }

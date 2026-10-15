@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:app_rtsg_client/application/trips_controller.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -7,19 +9,9 @@ class DashboardController extends GetxController {
   final RxInt selectedIndex = 0.obs;
   final RxBool isNavigationVisible = true.obs;
 
-  late final List<ScrollController> tabScrollControllers;
-
   @override
   void onInit() {
     super.onInit();
-
-    tabScrollControllers = List<ScrollController>.generate(4, (index) {
-      final scrollController = ScrollController();
-      scrollController.addListener(
-        () => _handleTabScroll(scrollController),
-      );
-      return scrollController;
-    });
 
     selectedIndex.value = _indexFromRoute(Get.currentRoute);
 
@@ -33,36 +25,40 @@ class DashboardController extends GetxController {
   }
 
   void changePage(int index) {
+    if (index == 1 && Get.isRegistered<TripsController>()) {
+      unawaited(Get.find<TripsController>().fetchTrips());
+    }
     if (index < 0 || index > 3 || selectedIndex.value == index) return;
     selectedIndex.value = index;
     showNavigation();
   }
 
-  void _handleTabScroll(ScrollController scrollController) {
-    if (!scrollController.hasClients) return;
-
-    final position = scrollController.position;
-
-    // En el inicio de la página la navegación siempre debe estar visible.
-    if (position.pixels <= 6) {
+  bool handleTabScroll(ScrollNotification notification) {
+    if (isClosed || notification.depth != 0) return false;
+    if (notification.metrics.pixels <= 6) {
       showNavigation();
-      return;
+      return false;
     }
-
-    switch (position.userScrollDirection) {
+    final direction = notification is ScrollUpdateNotification
+        ? (notification.scrollDelta ?? 0) > 0
+              ? ScrollDirection.reverse
+              : (notification.scrollDelta ?? 0) < 0
+              ? ScrollDirection.forward
+              : ScrollDirection.idle
+        : notification is UserScrollNotification
+        ? notification.direction
+        : ScrollDirection.idle;
+    switch (direction) {
       case ScrollDirection.reverse:
-        // reverse = el contenido avanza hacia abajo.
-        if (position.extentBefore > 18) {
-          hideNavigation();
-        }
+        if (notification.metrics.extentBefore > 18) hideNavigation();
         break;
       case ScrollDirection.forward:
-        // forward = el usuario vuelve hacia la parte superior.
         showNavigation();
         break;
       case ScrollDirection.idle:
         break;
     }
+    return false;
   }
 
   void showNavigation() {
@@ -84,13 +80,5 @@ class DashboardController extends GetxController {
       AppRoutes.ACCOUNT => 3,
       _ => 0,
     };
-  }
-
-  @override
-  void onClose() {
-    for (final scrollController in tabScrollControllers) {
-      scrollController.dispose();
-    }
-    super.onClose();
   }
 }

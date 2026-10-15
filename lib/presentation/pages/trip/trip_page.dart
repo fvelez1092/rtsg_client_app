@@ -8,6 +8,7 @@ import 'package:app_rtsg_client/data/models/trip_status.dart';
 import 'package:app_rtsg_client/presentation/pages/trip/components/route_input_sheet.dart';
 import 'package:app_rtsg_client/presentation/pages/trip/components/trip_panel.dart';
 import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
+import 'package:app_rtsg_client/presentation/pages/trip/driver_tracking_page.dart';
 
 class TripPage extends StatefulWidget {
   const TripPage({super.key});
@@ -244,10 +245,7 @@ class _TripPageState extends State<TripPage> {
       ),
       child: const Text(
         '© OpenStreetMap contributors',
-        style: TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 9,
-        ),
+        style: TextStyle(color: AppColors.textSecondary, fontSize: 9),
       ),
     );
   }
@@ -346,6 +344,19 @@ class _TripPageState extends State<TripPage> {
 
   @override
   Widget build(BuildContext context) {
+    return Obx(() {
+      final status = controller.status.value;
+      if (status == TripStatus.accepted ||
+          status == TripStatus.arrived ||
+          status == TripStatus.started ||
+          status == TripStatus.completed) {
+        return DriverTrackingPage(controller: controller);
+      }
+      return _buildRequest(context);
+    });
+  }
+
+  Widget _buildRequest(BuildContext context) {
     final args = Get.arguments;
     final isReservation = args is Map && args['isReservation'] == true;
     final reservationLabel = isReservation
@@ -372,8 +383,10 @@ class _TripPageState extends State<TripPage> {
                 : (origin ?? controller.lastCenter);
 
             final actualExtent = _routeSheetExtent.clamp(0.40, 0.70);
-            final progress =
-                ((actualExtent - 0.40) / (0.70 - 0.40)).clamp(0.0, 1.0);
+            final progress = ((actualExtent - 0.40) / (0.70 - 0.40)).clamp(
+              0.0,
+              1.0,
+            );
             final cameraBottomExtent = 0.31 + (progress * 0.10);
             final distanceKm = controller.distanceKm.value;
             final distanceMaxZoom = _fitMaxZoomForDistance(distanceKm);
@@ -393,9 +406,7 @@ class _TripPageState extends State<TripPage> {
               top: 0,
               left: 0,
               right: 0,
-              bottom: isPickingOrigin
-                  ? screenHeight * _searchSheetExtent
-                  : 0,
+              bottom: isPickingOrigin ? screenHeight * _searchSheetExtent : 0,
               child: MapPicker(
                 initialCenter: mapCenter,
                 initialZoom: hasRoute ? distanceMaxZoom : 16,
@@ -415,11 +426,7 @@ class _TripPageState extends State<TripPage> {
                 polylineColor: AppColors.brandGreen,
                 onChanged: (center, zoom, {required isFinal}) {
                   if (!isPickingOrigin) return;
-                  controller.onMapChanged(
-                    center,
-                    zoom,
-                    isFinal: isFinal,
-                  );
+                  controller.onMapChanged(center, zoom, isFinal: isFinal);
                 },
               ),
             );
@@ -542,10 +549,8 @@ class _TripPageState extends State<TripPage> {
             );
 
             return NotificationListener<DraggableScrollableNotification>(
-              onNotification: (notification) => _onSheetNotification(
-                notification,
-                hasRoute: hasRoute,
-              ),
+              onNotification: (notification) =>
+                  _onSheetNotification(notification, hasRoute: hasRoute),
               child: sheet,
             );
           }),

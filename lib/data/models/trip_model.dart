@@ -11,8 +11,11 @@ class TripModel {
   final double distanceKm;
   final int durationMin;
   final double fare;
+  final bool hasDistance;
+  final bool hasFare;
 
   final TripStatus status;
+
   /// Datos vigentes de la asignación enviados por el backend.
   final Map<String, dynamic>? assignment;
 
@@ -26,22 +29,35 @@ class TripModel {
     required this.durationMin,
     required this.fare,
     required this.status,
+    this.hasDistance = true,
+    this.hasFare = true,
     this.assignment,
   });
 
   TripModel copyWith({
     TripStatus? status,
+    LatLng? origin,
+    String? originName,
+    LatLng? destination,
+    String? destinationName,
+    double? distanceKm,
+    int? durationMin,
+    double? fare,
+    bool? hasDistance,
+    bool? hasFare,
     Map<String, dynamic>? assignment,
   }) {
     return TripModel(
       id: id,
-      origin: origin,
-      originName: originName,
-      destination: destination,
-      destinationName: destinationName,
-      distanceKm: distanceKm,
-      durationMin: durationMin,
-      fare: fare,
+      origin: origin ?? this.origin,
+      originName: originName ?? this.originName,
+      destination: destination ?? this.destination,
+      destinationName: destinationName ?? this.destinationName,
+      distanceKm: distanceKm ?? this.distanceKm,
+      durationMin: durationMin ?? this.durationMin,
+      fare: fare ?? this.fare,
+      hasDistance: hasDistance ?? this.hasDistance,
+      hasFare: hasFare ?? this.hasFare,
       status: status ?? this.status,
       assignment: assignment ?? this.assignment,
     );

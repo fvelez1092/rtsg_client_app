@@ -19,6 +19,7 @@ class TripsController extends GetxController {
   }
 
   Future<void> fetchTrips() async {
+    if (loading.value) return;
     loading.value = true;
     error.value = '';
     try {

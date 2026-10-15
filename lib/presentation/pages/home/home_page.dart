@@ -9,8 +9,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-class HomePage extends GetView<HomeController> {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late final HomeController controller = Get.find<HomeController>();
+  final PageController _advertisementsPageController = PageController(
+    viewportFraction: 0.91,
+  );
+
+  @override
+  void dispose() {
+    _advertisementsPageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +267,7 @@ class HomePage extends GetView<HomeController> {
           SizedBox(
             height: 225,
             child: PageView.builder(
-              controller: controller.advertisementsPageController,
+              controller: _advertisementsPageController,
               itemCount: controller.advertisements.length,
               onPageChanged: controller.changeAdvertisement,
               itemBuilder: (context, index) {
@@ -260,8 +276,9 @@ class HomePage extends GetView<HomeController> {
                 return PartnerAdCard(
                   advertisement: advertisement,
                   onTap: () {
-                    final partner =
-                        controller.partnerForAdvertisement(advertisement);
+                    final partner = controller.partnerForAdvertisement(
+                      advertisement,
+                    );
 
                     Get.toNamed(
                       AppRoutes.PARTNER_DETAIL,
@@ -350,10 +367,8 @@ class HomePage extends GetView<HomeController> {
 
                 return _PartnerCard(
                   partner: partner,
-                  onTap: () => Get.toNamed(
-                    AppRoutes.PARTNER_DETAIL,
-                    arguments: partner,
-                  ),
+                  onTap: () =>
+                      Get.toNamed(AppRoutes.PARTNER_DETAIL, arguments: partner),
                 );
               },
             ),
@@ -414,8 +429,8 @@ class HomePage extends GetView<HomeController> {
                         ),
                       )
                     : trip == null
-                        ? const _NoRecentTrips()
-                        : _RecentTrip(trip: trip),
+                    ? const _NoRecentTrips()
+                    : _RecentTrip(trip: trip),
               ),
             ),
           ),
@@ -423,7 +438,6 @@ class HomePage extends GetView<HomeController> {
       ),
     );
   }
-
 }
 
 class _RecentTrip extends StatelessWidget {
@@ -475,10 +489,7 @@ class _RecentTrip extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           Trip.priceLabel(trip),
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
         ),
       ],
     );
