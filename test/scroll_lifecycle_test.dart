@@ -1,3 +1,5 @@
+import 'package:app_rtsg_client/data/services/gps_service.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -17,6 +19,9 @@ void main() {
     'Home carousel remains usable while GetX controller is closed during transition',
     (tester) async {
       Get.testMode = true;
+      final gps = Get.put(GpsService());
+      gps.currentPosition.value = const LatLng(-0.2, -78.5);
+      gps.access.value = LocationAccess.available;
       final content = HomeContentController(
         partnersService: PartnersService(),
         publicidadService: PublicidadService(),

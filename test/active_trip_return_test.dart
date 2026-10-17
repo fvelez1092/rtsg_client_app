@@ -1,3 +1,4 @@
+import 'package:app_rtsg_client/data/models/trips/trip_model.dart' as history;
 import 'package:flutter/material.dart';
 import 'package:app_rtsg_client/data/services/active_trip_session.dart';
 import 'package:app_rtsg_client/presentation/widgets/active_trip_banner.dart';
@@ -12,6 +13,8 @@ import 'package:app_rtsg_client/data/services/trip_service.dart';
 import 'package:app_rtsg_client/data/services/trip_socket_service.dart';
 
 class FakeTrips implements TripService {
+  @override
+  Future<history.Trip?> getTripDetails(String id) async => null;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -83,8 +86,10 @@ void main() {
     final session = ActiveTripSession.instance;
     Get.put(GpsService());
     Get.put<TripService>(FakeTrips());
-    Get.put<TripSocketService>(FakeSocket());
+    final socket = FakeSocket();
+    Get.put<TripSocketService>(socket);
     Get.put(TripController()).recoverAssignedTrip(42);
+    socket.assignmentEvents.add({'carrera_id': 42, 'estado_codigo': 'E'});
     await Get.delete<TripController>();
     await tester.pumpWidget(
       GetMaterialApp(

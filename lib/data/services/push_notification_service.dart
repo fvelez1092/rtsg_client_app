@@ -1,5 +1,8 @@
+import 'package:flutter/widgets.dart';
+import 'package:app_rtsg_client/application/trip_controller.dart';
+import 'package:app_rtsg_client/data/models/trip_notification_event.dart';
+import 'package:app_rtsg_client/data/services/trip_notification_ledger.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:app_rtsg_client/data/services/auth_service.dart';
@@ -11,8 +14,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
-/// El FCM solo avisa que el conductor fue asignado.
-/// La información vigente de la carrera se recupera por Socket.IO.
+/// notification + data: el sistema presenta el aviso fuera de primer plano.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (Firebase.apps.isEmpty) {
@@ -20,72 +22,21 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
-
-  final tripId = _assignmentTripIdFromData(message.data);
-  if (tripId == null) return;
-
-  final notifications = FlutterLocalNotificationsPlugin();
-  await notifications.initialize(
-    settings: const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
-    ),
-  );
-  await notifications.show(
-    id: tripId,
-    title: message.notification?.title ?? 'Conductor asignado',
-    body: message.notification?.body ??
-        'Abre RTSG para consultar los datos de tu carrera.',
-    notificationDetails: const NotificationDetails(
-      android: AndroidNotificationDetails(
-        'rtsg_trip_updates',
-        'Actualizaciones de carrera',
-        channelDescription: 'Avisos sobre el estado de tus carreras RTSG.',
-        importance: Importance.max,
-        priority: Priority.high,
-      ),
-      iOS: DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      ),
-    ),
-    payload: tripId.toString(),
-  );
-  log('[FCM] asignación mostrada en segundo plano: carrera_id=$tripId');
+  // No crear otra notificación local: FCM ya presenta notification.
 }
 
-int? _assignmentTripIdFromData(Map<String, dynamic> source) {
-  var data = Map<String, dynamic>.from(source);
-  final nested = data['data'];
-  if (nested is String) {
-    try {
-      final decoded = jsonDecode(nested);
-      if (decoded is Map) data = {...data, ...Map<String, dynamic>.from(decoded)};
-    } catch (_) {
-      return null;
-    }
-  } else if (nested is Map) {
-    data = {...data, ...Map<String, dynamic>.from(nested)};
-  }
-
-  final type = (data['tipo'] ?? data['type'] ?? data['evento'] ?? data['event'])
-      ?.toString()
-      .trim()
-      .toUpperCase();
-  if (type != 'CONDUCTOR_ASIGNADO') return null;
-
-  final rawId = data['carrera_id'] ?? data['trip_id'];
-  final tripId = int.tryParse(rawId?.toString() ?? '');
-  return tripId != null && tripId > 0 ? tripId : null;
-}
-
-class PushNotificationService extends GetxService {
+class PushNotificationService extends GetxService with WidgetsBindingObserver {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   final AuthService _authService = AuthService();
   final LocalStorage _storage = LocalStorage();
+
+  late final TripNotificationLedger _ledger = TripNotificationLedger(
+    read: _storage.recentTripEvents,
+    write: _storage.saveTripEvents,
+  );
+  bool _openingTrip = false;
 
   final RxBool _notificationsEnabled = false.obs;
   final RxBool isDeviceRegistered = false.obs;
@@ -120,11 +71,12 @@ class PushNotificationService extends GetxService {
       },
     );
 
-    final localLaunch = await _localNotifications.getNotificationAppLaunchDetails();
+    WidgetsBinding.instance.addObserver(this);
+
+    final localLaunch = await _localNotifications
+        .getNotificationAppLaunchDetails();
     if (localLaunch?.didNotificationLaunchApp == true) {
-      _handleLocalNotificationTap(
-        localLaunch?.notificationResponse?.payload,
-      );
+      _handleLocalNotificationTap(localLaunch?.notificationResponse?.payload);
     }
 
     await _messaging.setForegroundNotificationPresentationOptions(
@@ -133,8 +85,9 @@ class PushNotificationService extends GetxService {
       sound: false,
     );
 
-    _messageSubscription =
-        FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    _messageSubscription = FirebaseMessaging.onMessage.listen(
+      _handleForegroundMessage,
+    );
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
       _handleOpenedMessage,
     );
@@ -172,14 +125,52 @@ class PushNotificationService extends GetxService {
         badge: true,
         sound: true,
       );
-      _notificationsEnabled.value =
-          settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional;
+      _updatePermissionStatus(settings);
     } catch (error) {
       _notificationsEnabled.value = false;
       log('[FCM] no se pudo solicitar permiso de notificaciones: $error');
     }
     return notificationsEnabled;
+  }
+
+  void _updatePermissionStatus(NotificationSettings settings) {
+    _notificationsEnabled.value =
+        settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
+    debugPrint(
+      '[RTSG][AVISOS] permisos=${settings.authorizationStatus.name} '
+      'alerta=${settings.alert.name} sonido=${settings.sound.name}',
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshPermissionStatus());
+    }
+  }
+
+  Future<void> _refreshPermissionStatus() async {
+    try {
+      _updatePermissionStatus(await _messaging.getNotificationSettings());
+    } catch (error) {
+      debugPrint(
+        '[RTSG][AVISOS] No se pudieron consultar los permisos: $error',
+      );
+    }
+  }
+
+  Future<bool> showTestNotification() async {
+    await init();
+    if (!await requestPermission()) return false;
+    await _localNotifications.show(
+      id: 2147483000,
+      title: 'RTSG: aviso de prueba',
+      body: 'Las notificaciones locales de este teléfono están configuradas.',
+      notificationDetails: _tripNotificationDetails,
+    );
+    debugPrint('[RTSG][AVISOS] Prueba local solicitada al sistema operativo');
+    return true;
   }
 
   Future<void> registerDeviceForCurrentSession() async {
@@ -233,109 +224,140 @@ class PushNotificationService extends GetxService {
     }
   }
 
-  Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    final tripId = _assignmentTripId(message.data);
-    if (tripId == null) return;
+  Future<void> _handleForegroundMessage(RemoteMessage message) =>
+      handleForegroundTripEvent(
+        message.data,
+        title: message.notification?.title,
+        body: message.notification?.body,
+      );
 
-    final title = message.notification?.title ?? 'Conductor asignado';
-    final body = message.notification?.body ??
-        'Abre RTSG para consultar los datos de tu carrera.';
-    await _showLocalNotification(title, body, tripId);
+  Future<void> handleForegroundTripEvent(
+    Map<String, dynamic> data, {
+    String? title,
+    String? body,
+  }) async {
+    if (!_sessionReady ||
+        !notificationsEnabled ||
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      debugPrint(
+        '[RTSG][AVISOS] Evento omitido: sesión=$_sessionReady '
+        'permiso=$notificationsEnabled app=${WidgetsBinding.instance.lifecycleState}',
+      );
+      return;
+    }
+    final event = TripNotificationEvent.fromData(data);
+    if (event == null) {
+      debugPrint(
+        '[RTSG][AVISOS] Evento omitido: tipo o carrera no reconocidos',
+      );
+      return;
+    }
+    debugPrint(
+      '[RTSG][AVISOS] Recibido: carrera=${event.tripId} '
+      'estado=${event.stateCode} evento=${event.eventId}',
+    );
+    if (event.eventId == null) {
+      log('[FCM] aviso omitido: falta evento_id para carrera ${event.tripId}');
+      return;
+    }
+    try {
+      final sent = await _ledger.runOnce(
+        event.eventId!,
+        () => _showLocalNotification(
+          title ?? event.title,
+          body ?? event.body,
+          event,
+        ),
+      );
+      debugPrint(
+        '[RTSG][AVISOS] evento=${event.eventId}: '
+        '${sent ? "aviso solicitado al sistema" : "duplicado omitido"}',
+      );
+    } catch (error) {
+      log('[FCM] no se pudo mostrar el aviso de carrera: $error');
+    }
   }
 
   void _handleOpenedMessage(RemoteMessage message) {
-    final tripId = _assignmentTripId(message.data);
-    if (tripId == null) {
-      log('[FCM] se ignoró una push que no corresponde a una asignación de cliente');
-      return;
-    }
-    log('[FCM] asignación abierta: carrera_id=$tripId');
-    _queueAssignment(tripId);
+    final event = TripNotificationEvent.fromData(message.data);
+    if (event != null) _queueTrip(event);
   }
 
   Future<void> _showLocalNotification(
     String title,
     String body,
-    int tripId,
+    TripNotificationEvent event,
   ) async {
     await _localNotifications.show(
       id: DateTime.now().millisecondsSinceEpoch.remainder(2147483647),
       title: title,
       body: body,
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'rtsg_trip_updates',
-          'Actualizaciones de carrera',
-          channelDescription: 'Avisos sobre el estado de tus carreras RTSG.',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-      payload: tripId.toString(),
+      notificationDetails: _tripNotificationDetails,
+      payload: event.payload,
     );
   }
 
+  static const _tripNotificationDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'rtsg_trip_updates',
+      'Actualizaciones de carrera',
+      channelDescription: 'Avisos sobre el estado de tus carreras RTSG.',
+      importance: Importance.max,
+      priority: Priority.high,
+    ),
+    iOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      presentBanner: true,
+      presentList: true,
+    ),
+  );
+
   void _handleLocalNotificationTap(String? payload) {
-    final tripId = int.tryParse(payload ?? '');
-    if (tripId == null || tripId <= 0) return;
-    log('[FCM] notificación local abierta: carrera_id=$tripId');
-    _queueAssignment(tripId);
+    final event = TripNotificationEvent.fromPayload(payload);
+    if (event != null) _queueTrip(event);
   }
 
-  void _queueAssignment(int tripId) {
-    requestedAssignmentTripId.value = tripId;
+  void _queueTrip(TripNotificationEvent event) {
+    // Tocar una notificación siempre permite recuperar el estado, incluso
+    // cuando ese evento ya produjo un aviso por otro canal.
+    requestedAssignmentTripId.value = event.tripId;
+    if (event.eventId != null) {
+      unawaited(
+        _ledger.runOnce(event.eventId!, () async {}).catchError((Object error) {
+          log('[FCM] no se pudo registrar el evento abierto: $error');
+          return false;
+        }),
+      );
+    }
     unawaited(_openPendingAssignment());
   }
 
   Future<void> _openPendingAssignment() async {
+    if (_openingTrip || !_sessionReady || Get.key.currentState == null) return;
     final tripId = requestedAssignmentTripId.value;
-    if (!_sessionReady || tripId == null || Get.key.currentState == null) {
-      return;
-    }
-
-    final arguments = <String, dynamic>{'assignedTripId': tripId};
-    if (Get.currentRoute == AppRoutes.TRIP) {
-      await Get.offNamed<void>(AppRoutes.TRIP, arguments: arguments);
-    } else {
-      await Get.toNamed<void>(AppRoutes.TRIP, arguments: arguments);
-    }
-    if (requestedAssignmentTripId.value == tripId) {
-      requestedAssignmentTripId.value = null;
-    }
-  }
-
-  int? _assignmentTripId(Map<String, dynamic> source) {
-    var data = Map<String, dynamic>.from(source);
-    final nested = data['data'];
-    if (nested is String) {
-      try {
-        final decoded = jsonDecode(nested);
-        if (decoded is Map) data = {...data, ...Map<String, dynamic>.from(decoded)};
-      } catch (_) {
-        return null;
+    if (tripId == null) return;
+    _openingTrip = true;
+    requestedAssignmentTripId.value = null;
+    try {
+      if (Get.currentRoute == AppRoutes.TRIP &&
+          Get.isRegistered<TripController>()) {
+        Get.find<TripController>().recoverAssignedTrip(tripId);
+      } else {
+        Get.toNamed<void>(
+          AppRoutes.TRIP,
+          arguments: {'assignedTripId': tripId},
+        );
       }
-    } else if (nested is Map) {
-      data = {...data, ...Map<String, dynamic>.from(nested)};
+    } finally {
+      _openingTrip = false;
     }
-
-    final type = (data['tipo'] ?? data['type'] ?? data['evento'] ?? data['event'])
-        ?.toString()
-        .trim()
-        .toUpperCase();
-    if (type != 'CONDUCTOR_ASIGNADO') return null;
-
-    final rawId = data['carrera_id'] ?? data['trip_id'];
-    final tripId = int.tryParse(rawId?.toString() ?? '');
-    return tripId != null && tripId > 0 ? tripId : null;
   }
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tokenRefreshSubscription?.cancel();
     _messageSubscription?.cancel();
     _openedSubscription?.cancel();

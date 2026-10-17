@@ -13,9 +13,7 @@ class TripService {
     try {
       // El backend espera un campo multipart llamado "data" cuyo valor sea
       // directamente el JSON de la carrera, igual que JSON.stringify en Angular.
-      final Map<String, dynamic> mapData = {
-        'data': jsonEncode(input.toJson()),
-      };
+      final Map<String, dynamic> mapData = {'data': jsonEncode(input.toJson())};
 
       if (audioPath != null && audioPath.isNotEmpty) {
         // Si hay ruta, enviamos el archivo
@@ -81,6 +79,27 @@ class TripService {
       rethrow;
     } catch (e) {
       throw Exception('Error al obtener viajes: $e');
+    }
+  }
+
+  Future<Trip?> getTripDetails(String id) async {
+    final seen = <int>{};
+    for (var page = 1; ; page++) {
+      final response = await _dio.get(
+        '/mostrar.carreras.cliente',
+        queryParameters: {'page': page, 'limit': 10},
+      );
+      final api = ApiResponse<List<Trip>>.fromJson(
+        _asMap(response.data, response.requestOptions),
+        _parseTrips,
+      );
+      if (!api.ok) throw Exception(api.message);
+      for (final trip in api.data) {
+        if (trip.idTravelRequest.toString() == id) return trip;
+      }
+      final previousCount = seen.length;
+      seen.addAll(api.data.map((trip) => trip.idTravelRequest));
+      if (api.data.length < 10 || seen.length == previousCount) return null;
     }
   }
 

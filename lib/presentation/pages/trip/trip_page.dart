@@ -345,11 +345,41 @@ class _TripPageState extends State<TripPage> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      if (controller.isRecoveringTrip.value ||
+          controller.recoveryError.value.isNotEmpty) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Consultando tu viaje')),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: controller.isRecoveringTrip.value
+                  ? const CircularProgressIndicator()
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(controller.recoveryError.value),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () {
+                            final id = int.tryParse(
+                              controller.activeTrip.value?.id ?? '',
+                            );
+                            if (id != null) controller.recoverAssignedTrip(id);
+                          },
+                          child: const Text('Reintentar'),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        );
+      }
       final status = controller.status.value;
       if (status == TripStatus.accepted ||
           status == TripStatus.arrived ||
           status == TripStatus.started ||
-          status == TripStatus.completed) {
+          status == TripStatus.completed ||
+          status == TripStatus.cancelled) {
         return DriverTrackingPage(controller: controller);
       }
       return _buildRequest(context);

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Usamos la cámara para tomar tu foto de perfil.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Permite elegir una imagen de tu galería como foto de perfil.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

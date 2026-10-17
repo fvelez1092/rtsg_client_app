@@ -16,7 +16,16 @@ class LocalStorage {
     return _localStorage.read(_token); //sharedPreferences.getString(_token)!;
   }
 
+  List<String> recentTripEvents() =>
+      (_localStorage.read<List>('TRIP_EVENT_IDS') ?? [])
+          .whereType<String>()
+          .toList();
+
+  Future<void> saveTripEvents(List<String> ids) =>
+      _localStorage.write('TRIP_EVENT_IDS', ids);
+
   Future<void> clearData() async {
+    await _localStorage.remove('TRIP_EVENT_IDS');
     await _localStorage.remove(_token);
     await _localStorage.remove(_userKey);
   }

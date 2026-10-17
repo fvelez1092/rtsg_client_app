@@ -1,397 +1,198 @@
 import 'package:app_rtsg_client/application/profile_controller.dart';
-import 'package:app_rtsg_client/core/theme/light_theme.dart';
-import 'package:app_rtsg_client/data/services/local_storage_service.dart';
-import 'package:app_rtsg_client/presentation/pages/profile/components/profile_info_card.dart';
-import 'package:app_rtsg_client/presentation/pages/profile/components/profile_section_title.dart';
-import 'package:app_rtsg_client/routes/rtsg_routes.dart';
+import 'package:app_rtsg_client/core/theme/app_colors.dart';
+import 'package:app_rtsg_client/presentation/pages/profile/components/profile_photo_editor.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 class ProfilePage extends GetView<ProfileController> {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: ListView(
-        padding: EdgeInsets.zero,
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.background,
+    appBar: AppBar(
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.textPrimary,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      title: const Text(
+        'Información personal',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+      ),
+    ),
+    body: SafeArea(
+      top: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
-          // ---------------- HEADER (kept in page) ----------------
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [cs.primary, _darken(cs.primary, 0.12)],
-              ),
-            ),
-            child: Column(
+          _card(
+            Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _iconButton(
-                      context,
-                      Icons.arrow_back,
-                      onTap: () => Get.back(),
+                ProfilePhotoEditor(controller: controller),
+                const SizedBox(height: 12),
+                Obx(
+                  () => Text(
+                    controller.fullName.isEmpty
+                        ? 'Cliente RTSG'
+                        : controller.fullName,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
                     ),
-                    Text(
-                      "Mi Perfil",
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: cs.onPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(width: 40, height: 40), // no edit icon
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-
-                // Avatar + camera button
-                Stack(
-                  children: [
-                    Obx(() {
-                      final provider = controller.avatarImageProvider;
-
-                      return CircleAvatar(
-                        radius: 48,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: provider,
-                        child: provider == null
-                            ? const Icon(
-                                Icons.person,
-                                size: 48,
-                                color: Colors.white,
-                              )
-                            : null,
-                      );
-                    }),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: () => _showPhotoPickerSheet(context),
-                        child: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: cs.secondary,
-                          child: Icon(
-                            Icons.camera,
-                            size: 14,
-                            color: ColorsApp.primary,
-                          ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Tu perfil de cliente',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.inputFill,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Obx(() {
+                    final code = controller.customerCode;
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                      ),
+                      leading: const Icon(
+                        Icons.badge_outlined,
+                        color: AppColors.brandGreen,
+                      ),
+                      title: const Text(
+                        'Código de cliente',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                    ),
-                  ],
+                      subtitle: Text(
+                        code,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      trailing: code == 'No disponible'
+                          ? null
+                          : IconButton(
+                              tooltip: 'Copiar código',
+                              icon: const Icon(Icons.copy_outlined, size: 20),
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: code),
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Código copiado'),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                    );
+                  }),
                 ),
-
-                const SizedBox(height: 8),
-                Obx(() {
-                  return Text(
-                    controller.fullName,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: cs.onPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  );
-                }),
-                const SizedBox(height: 4),
-                Obx(() {
-                  return Text(
-                    controller.role,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: cs.onPrimary.withValues(alpha: 0.75),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  );
-                }),
               ],
             ),
           ),
-
-          // ---------------- BODY ----------------
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(32),
-              ),
+          const SizedBox(height: 24),
+          const Text(
+            'Datos personales',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
             ),
-            child: Obx(() {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          const SizedBox(height: 12),
+          Obx(
+            () => _card(
+              Column(
                 children: [
-                  const SizedBox(height: 16),
-
-                  // Personal
-                  const ProfileSectionTitle(
-                    icon: Icons.person,
-                    title: "Información Personal",
+                  _detail(
+                    Icons.person_outline_rounded,
+                    'Nombre completo',
+                    controller.fullName,
                   ),
-                  const SizedBox(height: 12),
-                  ProfileInfoCard(
-                    items: [
-                      ProfileInfoItem(
-                        label: "Nombre completo",
-                        value: controller.fullName,
-                      ),
-                      ProfileInfoItem(
-                        label: "Teléfono",
-                        value: controller.phone,
-                      ),
-                      ProfileInfoItem(
-                        label: "Correo electrónico",
-                        value: controller.email,
-                      ),
-                      ProfileInfoItem(
-                        label: "Dirección principal",
-                        value: controller.loadingAddresses.value
-                            ? "Cargando dirección…"
-                            : controller.address.isEmpty
-                                ? "Sin dirección registrada"
-                                : controller.address,
-                      ),
-                    ],
+                  const Divider(height: 28, color: AppColors.borderSoft),
+                  _detail(Icons.phone_outlined, 'Teléfono', controller.phone),
+                  const Divider(height: 28, color: AppColors.borderSoft),
+                  _detail(
+                    Icons.mail_outline_rounded,
+                    'Correo electrónico',
+                    controller.email,
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // Vehicle
-                  ProfileSectionTitle(
-                    icon: Icons.car_crash_outlined,
-                    title: "Información del Vehículo",
-                    //onPress: () {},
+                  const Divider(height: 28, color: AppColors.borderSoft),
+                  _detail(
+                    Icons.location_on_outlined,
+                    'Dirección principal',
+                    controller.loadingAddresses.value
+                        ? 'Cargando dirección…'
+                        : controller.address,
                   ),
-                  const SizedBox(height: 16),
-
-                  // ---------------- SETTINGS (kept in page) ----------------
-                  ProfileSectionTitle(
-                    icon: Icons.settings,
-                    title: "Configuración",
-                  ),
-                  const SizedBox(height: 12),
-                  _settingsTile(
-                    context,
-                    icon: Icons.notifications,
-                    label: "Notificaciones",
-                  ),
-                  _settingsTile(
-                    context,
-                    icon: Icons.privacy_tip_outlined,
-                    label: "Privacidad",
-                  ),
-                  _settingsTile(context, icon: Icons.headset, label: "Soporte"),
-
-                  const SizedBox(height: 12),
-
-                  // ---------------- LOGOUT (kept in page) ----------------
-                  _logoutButton(context),
-
-                  const SizedBox(height: 80),
                 ],
-              );
-            }),
+              ),
+            ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 
-  // --------------------- UI HELPERS (page-level) ---------------------
+  Widget _card(Widget child) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: AppColors.borderSoft),
+    ),
+    child: child,
+  );
 
-  Widget _iconButton(
-    BuildContext context,
-    IconData icon, {
-    VoidCallback? onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
+  Widget _detail(IconData icon, String label, String value) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: cs.onPrimary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: cs.onPrimary.withValues(alpha: 0.10)),
+          color: AppColors.inputFill,
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: cs.onPrimary),
+        child: Icon(icon, size: 21, color: AppColors.brandGreen),
       ),
-    );
-  }
-
-  Widget _settingsTile(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-  }) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: cs.onSurface.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: cs.onSurface.withValues(alpha: 0.55)),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: cs.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          Icon(
-            Icons.chevron_right,
-            color: cs.onSurface.withValues(alpha: 0.45),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _logoutButton(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    return GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: cs.surface,
-            title: Text(
-              "Cerrar sesión",
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: cs.onSurface,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            content: Text(
-              "¿Estás seguro de que quieres cerrar sesión?",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.75),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  "Cancelar",
-                  style: TextStyle(color: cs.onSurface.withValues(alpha: 0.75)),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Get.find<LocalStorage>().clearData();
-                  Get.offAllNamed(AppRoutes.LOGIN);
-                },
-                child: Text(
-                  "Cerrar sesión",
-                  style: TextStyle(
-                    color: cs.secondary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: Color.alphaBlend(
-            Colors.red.withValues(alpha: 0.10),
-            cs.surface,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.output_outlined, color: Colors.red),
-            const SizedBox(width: 8),
             Text(
-              "Cerrar sesión",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.red,
-                fontWeight: FontWeight.w900,
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value.trim().isEmpty ? 'Sin registrar' : value,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  void _showPhotoPickerSheet(BuildContext context) {
-    final controller = Get.find<ProfileController>();
-    final cs = Theme.of(context).colorScheme;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.camera_alt),
-                  title: const Text("Tomar foto"),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await controller.pickPhoto(ProfilePhotoSource.camera);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library),
-                  title: const Text("Elegir de galería"),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await controller.pickPhoto(ProfilePhotoSource.gallery);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.close),
-                  title: const Text("Cancelar"),
-                  onTap: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-Color _darken(Color c, double amount) {
-  final hsl = HSLColor.fromColor(c);
-  final light = (hsl.lightness - amount).clamp(0.0, 1.0);
-  return hsl.withLightness(light).toColor();
+    ],
+  );
 }

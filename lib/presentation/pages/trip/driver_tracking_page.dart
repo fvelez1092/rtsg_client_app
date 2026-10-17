@@ -21,11 +21,12 @@ class DriverTrackingPage extends StatelessWidget {
       TripStatus.arrived => 'Tu conductor ha llegado',
       TripStatus.started => 'Viaje en curso',
       TripStatus.completed => 'Viaje finalizado',
+      TripStatus.cancelled => 'Viaje cancelado',
       _ => 'Tu conductor viene en camino',
     };
-    if (status == TripStatus.completed) {
+    if (status == TripStatus.completed || status == TripStatus.cancelled) {
       return Scaffold(
-        key: const ValueKey('completed-trip'),
+        key: ValueKey(status),
         appBar: AppBar(title: Text(title)),
         body: Center(
           child: Padding(
@@ -33,10 +34,14 @@ class DriverTrackingPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.check_circle_outline,
+                Icon(
+                  status == TripStatus.cancelled
+                      ? Icons.cancel_outlined
+                      : Icons.check_circle_outline,
                   size: 72,
-                  color: Colors.green,
+                  color: status == TripStatus.cancelled
+                      ? Colors.orange
+                      : Colors.green,
                 ),
                 const SizedBox(height: 16),
                 Text(

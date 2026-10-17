@@ -1,12 +1,18 @@
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
 import 'package:app_rtsg_client/data/network/dio_client.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class PartnersService {
   final Dio _dio = ApiClient.dio;
 
   Future<List<PartnerModel>> getPartners() async {
     final response = await _dio.get('/partners');
+    if (kDebugMode) {
+      debugPrint(
+        '[RTSG][HOME][PARTNERS] GET /partners status=${response.statusCode}',
+      );
+    }
     final body = _asMap(response.data, response.requestOptions);
 
     final success = body['estado'] == true || body['ok'] == true;
@@ -15,18 +21,26 @@ class PartnersService {
         requestOptions: response.requestOptions,
         response: response,
         type: DioExceptionType.badResponse,
-        error: (body['observacion'] ?? body['message'] ?? 'No se pudieron cargar los partners').toString(),
+        error:
+            (body['observacion'] ??
+                    body['message'] ??
+                    'No se pudieron cargar los partners')
+                .toString(),
       );
     }
 
     final raw = body['datos'] ?? body['data'];
     if (raw is! List) return const <PartnerModel>[];
 
-    return raw
+    final partners = raw
         .whereType<Map>()
         .map((item) => PartnerModel.fromJson(Map<String, dynamic>.from(item)))
         .where((partner) => partner.active)
         .toList();
+    if (kDebugMode) {
+      debugPrint('[RTSG][HOME][PARTNERS] partners activos=${partners.length}');
+    }
+    return partners;
   }
 
   Map<String, dynamic> _asMap(dynamic data, RequestOptions requestOptions) {

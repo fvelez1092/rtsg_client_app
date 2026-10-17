@@ -1,9 +1,80 @@
+import 'package:app_rtsg_client/core/constants/api_constants.dart';
 import 'package:app_rtsg_client/data/models/user_model.dart';
 import 'package:app_rtsg_client/data/network/dio_client.dart';
 import 'package:dio/dio.dart';
 
 class UserService {
-  final Dio _dio = ApiClient.dio;
+  UserService({Dio? dio}) : _dio = dio ?? ApiClient.dio;
+  final Dio _dio;
+
+  Future<void> updateProfilePhoto({
+    required List<int> bytes,
+    required String filename,
+    String? mimeType,
+  }) async {
+    if (bytes.isEmpty) throw Exception('La imagen seleccionada está vacía.');
+    final extension = filename.split('.').last.toLowerCase();
+    final contentType =
+        mimeType ??
+        switch (extension) {
+          'png' => 'image/png',
+          'webp' => 'image/webp',
+          'heic' => 'image/heic',
+          'heif' => 'image/heif',
+          _ => 'image/jpeg',
+        };
+    final form = FormData.fromMap({
+      'fotoPerfil': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType: DioMediaType.parse(contentType),
+      ),
+    });
+    try {
+      final response = await _dio.put(
+        '/perfil/foto',
+        data: form,
+        options: Options(contentType: Headers.multipartFormDataContentType),
+      );
+      final body = response.data;
+      if (body is Map) {
+        final result = body.containsKey('estado') ? body['estado'] : body['ok'];
+        if (result == false ||
+            result == 0 ||
+            result?.toString().toLowerCase() == 'false' ||
+            result == '0') {
+          throw Exception(
+            (body['observacion'] ??
+                    body['message'] ??
+                    'El servidor rechazó la foto de perfil.')
+                .toString(),
+          );
+        }
+      }
+    } on DioException catch (error) {
+      final body = error.response?.data;
+      final message = body is Map
+          ? body['observacion'] ?? body['message']
+          : null;
+      throw Exception(
+        message ??
+            (error.response?.statusCode == 413
+                ? 'La imagen es demasiado grande. Selecciona otra foto.'
+                : 'No se pudo guardar la foto. Revisa tu conexión y vuelve a intentarlo.'),
+      );
+    }
+  }
+
+  static String? profilePhotoUrl(dynamic photo) {
+    if (photo is! String || photo.trim().isEmpty) return null;
+    final uri = Uri.tryParse(photo.trim());
+    if (uri == null) return null;
+    final resolved = Uri.parse(ApiConstants.baseUrl).resolveUri(uri);
+    return (resolved.scheme == 'http' || resolved.scheme == 'https') &&
+            resolved.host.isNotEmpty
+        ? resolved.toString()
+        : null;
+  }
 
   Future<User> getUserByToken() async {
     try {

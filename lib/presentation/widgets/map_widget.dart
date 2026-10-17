@@ -91,6 +91,13 @@ class _MapPickerState extends State<MapPicker> {
     super.initState();
 
     _sub = _mapController.mapEventStream.listen((event) {
+      // Centrar en Casa, ajustar la ruta o cambiar el tamaño no es una
+      // selección manual del usuario y no debe borrar la dirección guardada.
+      if (event.source == MapEventSource.mapController ||
+          event.source == MapEventSource.fitCamera ||
+          event.source == MapEventSource.nonRotatedSizeChange) {
+        return;
+      }
       if (event is MapEventMoveStart) {
         _isMoving = true;
         _userInteracting = true;

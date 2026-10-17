@@ -1,3 +1,4 @@
+import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -38,6 +39,7 @@ void main() {
           GetPage(
             name: AppRoutes.DASHBOARD,
             binding: BindingsBuilder(() {
+              Get.put(GpsService());
               Get.put<LocalStorage>(FakeStorage());
               Get.put(GlobalMemory());
               controller = Get.put(DashboardController());

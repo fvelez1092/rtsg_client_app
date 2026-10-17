@@ -74,115 +74,105 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
-        idUser: _asInt(
-          json['id_user'] ?? json['idusuario'] ?? json['usuarioid'],
-        ),
-        idPerson: _asInt(
-          json['id_person'] ?? json['idpersona'] ?? json['id_persona'],
-        ),
-        fullName: _asString(
-          json['full_name'] ??
-              json['nombres_usuario'] ??
-              json['razon_social'] ??
-              json['username'],
-        ),
-        birthDate: _asString(
-          json['birth_date'] ??
-              json['fechanacimiento'] ??
-              json['fecha_nacimiento'],
-        ),
-        documentNumber: _asString(
-          json['document_number'] ??
-              json['cedulausuario'] ??
-              json['cedula_ruc'],
-        ),
-        razonSocial: _asString(
-          json['razon_social'] ?? json['nombres_usuario'],
-        ),
-        username: _asString(json['username'] ?? json['nombres_usuario']),
-        user: _asString(json['user'] ?? json['usuario']),
-        nip: _asString(json['nip']),
-        email: _asString(
-          json['email'] ?? json['correo'] ?? json['usuario'],
-        ),
-        landline: _asString(
-          json['landline'] ?? json['telefonofijo'] ?? json['telefono_fijo'],
-        ),
-        cellphone: _asString(
-          json['cellular'] ??
-              json['cellphone'] ??
-              json['telefonocelular'] ??
-              json['telefono_celular'],
-        ),
-        address: _asString(
-          json['address'] ??
-              json['anddress'] ??
-              json['direccion'] ??
-              _defaultAddressText(json['direcciones']),
-        ),
-        role: _asString(json['role'] ?? json['rol']),
-        idRole: _asInt(json['id_role'] ?? json['rolid'] ?? json['rol_id']),
-        sex: _asString(json['sex'] ?? json['sexo']),
-        recovery: _asBool(json['recovery'] ?? json['recuperacion']),
-        photo: json['photo'] ?? json['foto'],
-        statusUser: _asBool(json['status_user'] ?? json['estado']),
-        observation: _asString(
-          json['observation'] ??
-              json['observacion'] ??
-              json['observacion_persona'],
-        ),
-        placeOfBirth: _asString(json['lugar_nacimiento']),
-        nationality: _asString(json['nacionalidad']),
-        personType: _asString(json['tipopersona']),
-        parishId: _asInt(json['parroquia_id']),
-        occupationId: _asInt(json['ocupacion_id']),
-        occupation: _asString(json['ocupacion']),
-        customerCode: _asInt(json['codigocliente']),
-        registrationDate: _asString(json['fecha_registro']),
-        modificationDate: _asString(json['fecha_modificacion']),
-        roleActive: _asBool(json['estadorol']),
-        addresses: _parseAddresses(json['direcciones']),
-        companies: _parseCompanies(json['empresa'] ?? json['companies']),
-        units: _parseUnits(json['unidad'] ?? json['units']),
-        drivers: _parseDrivers(json['chofer'] ?? json['drivers']),
-      );
+    idUser: _asInt(json['id_user'] ?? json['idusuario'] ?? json['usuarioid']),
+    idPerson: _asInt(
+      json['id_person'] ?? json['idpersona'] ?? json['id_persona'],
+    ),
+    fullName: _asString(
+      json['full_name'] ??
+          json['nombres_usuario'] ??
+          json['razon_social'] ??
+          json['username'],
+    ),
+    birthDate: _asString(
+      json['birth_date'] ?? json['fechanacimiento'] ?? json['fecha_nacimiento'],
+    ),
+    documentNumber: _asString(
+      json['document_number'] ?? json['cedulausuario'] ?? json['cedula_ruc'],
+    ),
+    razonSocial: _asString(json['razon_social'] ?? json['nombres_usuario']),
+    username: _asString(json['username'] ?? json['nombres_usuario']),
+    user: _asString(json['user'] ?? json['usuario']),
+    nip: _asString(json['nip']),
+    email: _asString(json['email'] ?? json['correo'] ?? json['usuario']),
+    landline: _asString(
+      json['landline'] ?? json['telefonofijo'] ?? json['telefono_fijo'],
+    ),
+    cellphone: _asString(
+      json['cellular'] ??
+          json['cellphone'] ??
+          json['telefonocelular'] ??
+          json['telefono_celular'],
+    ),
+    address: _asString(
+      json['address'] ??
+          json['anddress'] ??
+          json['direccion'] ??
+          _defaultAddressText(json['direcciones']),
+    ),
+    role: _asString(json['role'] ?? json['rol']),
+    idRole: _asInt(json['id_role'] ?? json['rolid'] ?? json['rol_id']),
+    sex: _asString(json['sex'] ?? json['sexo']),
+    recovery: _asBool(json['recovery'] ?? json['recuperacion']),
+    photo: json.containsKey('foto_perfil')
+        ? json['foto_perfil']
+        : json['photo'] ?? json['foto'],
+    statusUser: _asBool(json['status_user'] ?? json['estado']),
+    observation: _asString(
+      json['observation'] ?? json['observacion'] ?? json['observacion_persona'],
+    ),
+    placeOfBirth: _asString(json['lugar_nacimiento']),
+    nationality: _asString(json['nacionalidad']),
+    personType: _asString(json['tipopersona']),
+    parishId: _asInt(json['parroquia_id']),
+    occupationId: _asInt(json['ocupacion_id']),
+    occupation: _asString(json['ocupacion']),
+    customerCode: _asInt(json['codigocliente'] ?? json['customer_code']),
+    registrationDate: _asString(json['fecha_registro']),
+    modificationDate: _asString(json['fecha_modificacion']),
+    roleActive: _asBool(json['estadorol']),
+    addresses: _parseAddresses(json['direcciones']),
+    companies: _parseCompanies(json['empresa'] ?? json['companies']),
+    units: _parseUnits(json['unidad'] ?? json['units']),
+    drivers: _parseDrivers(json['chofer'] ?? json['drivers']),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id_user': idUser,
-        'id_person': idPerson,
-        'full_name': fullName,
-        'birth_date': birthDate,
-        'document_number': documentNumber,
-        'razon_social': razonSocial,
-        'username': username,
-        'user': user,
-        'nip': nip,
-        'email': email,
-        'landline': landline,
-        'cellphone': cellphone,
-        'address': address,
-        'role': role,
-        'id_role': idRole,
-        'sex': sex,
-        'recovery': recovery,
-        'photo': photo,
-        'status_user': statusUser,
-        'observation': observation,
-        'place_of_birth': placeOfBirth,
-        'nationality': nationality,
-        'person_type': personType,
-        'parish_id': parishId,
-        'occupation_id': occupationId,
-        'occupation': occupation,
-        'customer_code': customerCode,
-        'registration_date': registrationDate,
-        'modification_date': modificationDate,
-        'role_active': roleActive,
-        'addresses': addresses.map((address) => address.toUpdateJson()).toList(),
-        'companies': companies.map((company) => company.toJson()).toList(),
-        'units': units.map((unit) => unit.toJson()).toList(),
-        'drivers': drivers.map((driver) => driver.toJson()).toList(),
-      };
+    'id_user': idUser,
+    'id_person': idPerson,
+    'full_name': fullName,
+    'birth_date': birthDate,
+    'document_number': documentNumber,
+    'razon_social': razonSocial,
+    'username': username,
+    'user': user,
+    'nip': nip,
+    'email': email,
+    'landline': landline,
+    'cellphone': cellphone,
+    'address': address,
+    'role': role,
+    'id_role': idRole,
+    'sex': sex,
+    'recovery': recovery,
+    'foto_perfil': photo,
+    'status_user': statusUser,
+    'observation': observation,
+    'place_of_birth': placeOfBirth,
+    'nationality': nationality,
+    'person_type': personType,
+    'parish_id': parishId,
+    'occupation_id': occupationId,
+    'occupation': occupation,
+    'customer_code': customerCode,
+    'registration_date': registrationDate,
+    'modification_date': modificationDate,
+    'role_active': roleActive,
+    'addresses': addresses.map((address) => address.toUpdateJson()).toList(),
+    'companies': companies.map((company) => company.toJson()).toList(),
+    'units': units.map((unit) => unit.toJson()).toList(),
+    'drivers': drivers.map((driver) => driver.toJson()).toList(),
+  };
 
   String get displayName {
     final values = [fullName, razonSocial, username, user, email];
@@ -247,60 +237,56 @@ class UserCompany {
   });
 
   factory UserCompany.fromJson(Map<String, dynamic> json) => UserCompany(
-        idCompany: _asInt(json['id_company'] ?? json['idCompany']),
-        ruc: _asString(json['ruc']),
-        razonSocial: _asString(json['razonsocial'] ?? json['razon_social']),
-        nombreComercial: _asString(
-          json['nombrecomercial'] ?? json['nombre_comercial'],
-        ),
-        celular: _asString(json['celular']),
-        telefono: _asString(json['telefono']),
-        correo: _asString(json['correo']),
-        direccion: _asString(json['direccion']),
-        enlace: _asString(json['enlace']),
-        numeroUnidades: _asInt(
-          json['numerounidades'] ?? json['numero_unidades'],
-        ),
-        statusCompany: _asBool(
-          json['statuscompany'] ?? json['status_company'],
-        ),
-        observationCompany: _asString(
-          json['observationcompany'] ?? json['observation_company'],
-        ),
-        dateRegisterCompany: _asString(
-          json['dateregistercompany'] ?? json['date_register_company'],
-        ),
-        dateModifyCompany: _asString(
-          json['datemodifycompany'] ?? json['date_modify_company'],
-        ),
-        paisId: _asInt(json['pais_id']),
-        provinciaId: _asInt(json['provincia_id']),
-        cantonId: _asInt(json['canton_id']),
-        tiempoAlertaAgendada: _asInt(json['tiempoalertaagendada']),
-        logo: json['logo'],
-      );
+    idCompany: _asInt(json['id_company'] ?? json['idCompany']),
+    ruc: _asString(json['ruc']),
+    razonSocial: _asString(json['razonsocial'] ?? json['razon_social']),
+    nombreComercial: _asString(
+      json['nombrecomercial'] ?? json['nombre_comercial'],
+    ),
+    celular: _asString(json['celular']),
+    telefono: _asString(json['telefono']),
+    correo: _asString(json['correo']),
+    direccion: _asString(json['direccion']),
+    enlace: _asString(json['enlace']),
+    numeroUnidades: _asInt(json['numerounidades'] ?? json['numero_unidades']),
+    statusCompany: _asBool(json['statuscompany'] ?? json['status_company']),
+    observationCompany: _asString(
+      json['observationcompany'] ?? json['observation_company'],
+    ),
+    dateRegisterCompany: _asString(
+      json['dateregistercompany'] ?? json['date_register_company'],
+    ),
+    dateModifyCompany: _asString(
+      json['datemodifycompany'] ?? json['date_modify_company'],
+    ),
+    paisId: _asInt(json['pais_id']),
+    provinciaId: _asInt(json['provincia_id']),
+    cantonId: _asInt(json['canton_id']),
+    tiempoAlertaAgendada: _asInt(json['tiempoalertaagendada']),
+    logo: json['logo'],
+  );
 
   Map<String, dynamic> toJson() => {
-        'id_company': idCompany,
-        'ruc': ruc,
-        'razonsocial': razonSocial,
-        'nombrecomercial': nombreComercial,
-        'celular': celular,
-        'telefono': telefono,
-        'correo': correo,
-        'direccion': direccion,
-        'enlace': enlace,
-        'numerounidades': numeroUnidades,
-        'statuscompany': statusCompany,
-        'observationcompany': observationCompany,
-        'dateregistercompany': dateRegisterCompany,
-        'datemodifycompany': dateModifyCompany,
-        'pais_id': paisId,
-        'provincia_id': provinciaId,
-        'canton_id': cantonId,
-        'tiempoalertaagendada': tiempoAlertaAgendada,
-        'logo': logo,
-      };
+    'id_company': idCompany,
+    'ruc': ruc,
+    'razonsocial': razonSocial,
+    'nombrecomercial': nombreComercial,
+    'celular': celular,
+    'telefono': telefono,
+    'correo': correo,
+    'direccion': direccion,
+    'enlace': enlace,
+    'numerounidades': numeroUnidades,
+    'statuscompany': statusCompany,
+    'observationcompany': observationCompany,
+    'dateregistercompany': dateRegisterCompany,
+    'datemodifycompany': dateModifyCompany,
+    'pais_id': paisId,
+    'provincia_id': provinciaId,
+    'canton_id': cantonId,
+    'tiempoalertaagendada': tiempoAlertaAgendada,
+    'logo': logo,
+  };
 }
 
 class UserUnit {
@@ -339,52 +325,48 @@ class UserUnit {
   });
 
   factory UserUnit.fromJson(Map<String, dynamic> json) => UserUnit(
-        id: _asInt(json['id']),
-        plate: _asString(json['placa'] ?? json['plate']),
-        brand: _asString(json['marca'] ?? json['brand']),
-        model: _asString(json['modelo'] ?? json['model']),
-        vehicleYear: _asString(
-          json['ano_vehiculo'] ??
-              json['año_vehiculo'] ??
-              json['vehicle_year'],
-        ),
-        lastReviewDate: _asString(
-          json['fechaultimarevision'] ??
-              json['fecha_ultima_revision'] ??
-              json['last_review_date'],
-        ),
-        observation: _asString(json['observacion'] ?? json['observation']),
-        partnerId: _asInt(json['socio_id'] ?? json['partner_id']),
-        status: _asBool(json['estado'] ?? json['status']),
-        unitNumber: _asInt(
-          json['numerounidad'] ?? json['numero_unidad'] ?? json['unit_number'],
-        ),
-        razonSocial: _asString(json['razon_social']),
-        registerDate: _asString(json['fecha_registro'] ?? json['register_date']),
-        modifyDate: _asString(
-          json['fecha_modificacion'] ?? json['modify_date'],
-        ),
-        time: _asString(json['hora'] ?? json['time']),
-        observation10: _asString(json['observacion10']),
-      );
+    id: _asInt(json['id']),
+    plate: _asString(json['placa'] ?? json['plate']),
+    brand: _asString(json['marca'] ?? json['brand']),
+    model: _asString(json['modelo'] ?? json['model']),
+    vehicleYear: _asString(
+      json['ano_vehiculo'] ?? json['año_vehiculo'] ?? json['vehicle_year'],
+    ),
+    lastReviewDate: _asString(
+      json['fechaultimarevision'] ??
+          json['fecha_ultima_revision'] ??
+          json['last_review_date'],
+    ),
+    observation: _asString(json['observacion'] ?? json['observation']),
+    partnerId: _asInt(json['socio_id'] ?? json['partner_id']),
+    status: _asBool(json['estado'] ?? json['status']),
+    unitNumber: _asInt(
+      json['numerounidad'] ?? json['numero_unidad'] ?? json['unit_number'],
+    ),
+    razonSocial: _asString(json['razon_social']),
+    registerDate: _asString(json['fecha_registro'] ?? json['register_date']),
+    modifyDate: _asString(json['fecha_modificacion'] ?? json['modify_date']),
+    time: _asString(json['hora'] ?? json['time']),
+    observation10: _asString(json['observacion10']),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'placa': plate,
-        'marca': brand,
-        'modelo': model,
-        'ano_vehiculo': vehicleYear,
-        'fechaultimarevision': lastReviewDate,
-        'observacion': observation,
-        'socio_id': partnerId,
-        'estado': status,
-        'numerounidad': unitNumber,
-        'razon_social': razonSocial,
-        'fecha_registro': registerDate,
-        'fecha_modificacion': modifyDate,
-        'hora': time,
-        'observacion10': observation10,
-      };
+    'id': id,
+    'placa': plate,
+    'marca': brand,
+    'modelo': model,
+    'ano_vehiculo': vehicleYear,
+    'fechaultimarevision': lastReviewDate,
+    'observacion': observation,
+    'socio_id': partnerId,
+    'estado': status,
+    'numerounidad': unitNumber,
+    'razon_social': razonSocial,
+    'fecha_registro': registerDate,
+    'fecha_modificacion': modifyDate,
+    'hora': time,
+    'observacion10': observation10,
+  };
 }
 
 class UserDriver {
@@ -411,30 +393,28 @@ class UserDriver {
   });
 
   factory UserDriver.fromJson(Map<String, dynamic> json) => UserDriver(
-        id: _asInt(json['id']),
-        personId: _asInt(json['personaid'] ?? json['persona_id']),
-        fullName: _asString(json['nombre_persona'] ?? json['nombres']),
-        email: _asString(json['correo'] ?? json['email']),
-        cellphone: _asString(
-          json['telefonocelular'] ?? json['telefono_celular'],
-        ),
-        unitId: _asInt(json['unidadid'] ?? json['unidad_id']),
-        unitNumber: _asInt(json['numerounidad'] ?? json['numero_unidad']),
-        plate: _asString(json['placa']),
-        status: _asBool(json['estado']),
-      );
+    id: _asInt(json['id']),
+    personId: _asInt(json['personaid'] ?? json['persona_id']),
+    fullName: _asString(json['nombre_persona'] ?? json['nombres']),
+    email: _asString(json['correo'] ?? json['email']),
+    cellphone: _asString(json['telefonocelular'] ?? json['telefono_celular']),
+    unitId: _asInt(json['unidadid'] ?? json['unidad_id']),
+    unitNumber: _asInt(json['numerounidad'] ?? json['numero_unidad']),
+    plate: _asString(json['placa']),
+    status: _asBool(json['estado']),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'persona_id': personId,
-        'nombre_persona': fullName,
-        'correo': email,
-        'telefono_celular': cellphone,
-        'unidad_id': unitId,
-        'numero_unidad': unitNumber,
-        'placa': plate,
-        'estado': status,
-      };
+    'id': id,
+    'persona_id': personId,
+    'nombre_persona': fullName,
+    'correo': email,
+    'telefono_celular': cellphone,
+    'unidad_id': unitId,
+    'numero_unidad': unitNumber,
+    'placa': plate,
+    'estado': status,
+  };
 }
 
 List<SavedAddress> _parseAddresses(dynamic value) {

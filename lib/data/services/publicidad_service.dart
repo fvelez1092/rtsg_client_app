@@ -1,12 +1,18 @@
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
 import 'package:app_rtsg_client/data/network/dio_client.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class PublicidadService {
   final Dio _dio = ApiClient.dio;
 
   Future<List<PartnerAdModel>> getPublicidades() async {
     final response = await _dio.get('/publicidades');
+    if (kDebugMode) {
+      debugPrint(
+        '[RTSG][HOME][ADS] GET /publicidades status=${response.statusCode}',
+      );
+    }
     final body = _asMap(response.data, response.requestOptions);
 
     final success = body['estado'] == true || body['ok'] == true;
@@ -15,7 +21,11 @@ class PublicidadService {
         requestOptions: response.requestOptions,
         response: response,
         type: DioExceptionType.badResponse,
-        error: (body['observacion'] ?? body['message'] ?? 'No se pudieron cargar las publicidades').toString(),
+        error:
+            (body['observacion'] ??
+                    body['message'] ??
+                    'No se pudieron cargar las publicidades')
+                .toString(),
       );
     }
 
@@ -29,6 +39,9 @@ class PublicidadService {
         .toList();
 
     items.sort((a, b) => b.priority.compareTo(a.priority));
+    if (kDebugMode) {
+      debugPrint('[RTSG][HOME][ADS] recomendaciones activas=${items.length}');
+    }
     return items;
   }
 

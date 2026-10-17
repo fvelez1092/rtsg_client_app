@@ -13,6 +13,12 @@ TripStatus? tripStatusFromBackend(Map<String, dynamic> trip) {
           .trim()
           .toUpperCase();
   return switch (state) {
+    'S' ||
+    'B' ||
+    'R' ||
+    'SOLICITADA' ||
+    'BUSCANDO_CONDUCTORES' => TripStatus.searching,
+    'C' || 'P' || 'CANCELADA' || 'CANCELADO' => TripStatus.cancelled,
     'E' || 'EN_CAMINO' => TripStatus.accepted,
     'L' || 'CLIENTE_NOTIFICADO_LLEGADA' => TripStatus.arrived,
     'I' || 'INICIADO' || 'EN_PROGRESO' => TripStatus.started,

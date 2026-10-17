@@ -215,6 +215,9 @@ class Trip {
       case 'abierta':
       case 'abierto':
         return TripStatus.pending;
+      case 's':
+      case 'b':
+      case 'r':
       case 'pending':
       case 'pendiente':
         return TripStatus.pending;
@@ -239,6 +242,9 @@ class Trip {
       case 'completado':
       case 'complete':
         return TripStatus.completed;
+      case 'c':
+      case 'p':
+      case 'cancelada':
       case 'cancelled':
       case 'canceled':
       case 'cancelado':

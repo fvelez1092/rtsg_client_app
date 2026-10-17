@@ -1,3 +1,6 @@
+import 'package:get/get.dart';
+import 'package:app_rtsg_client/data/services/push_notification_service.dart';
+import 'package:app_rtsg_client/data/services/trip_diagnostics.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -52,12 +55,18 @@ class TripSocketService {
       final eventArgs = args is List ? args : <dynamic>[args];
       if (eventArgs.isEmpty) return;
 
+      logTripEvent(
+        'socket.conductorSeleccionado',
+        eventArgs.first,
+        activeTripId: _activeTripId,
+      );
       final event = _map(eventArgs.first);
       final confirm = eventArgs.length > 1 && eventArgs[1] is Function
           ? eventArgs[1] as Function
           : null;
 
       _assignmentController.add(event);
+      _notifyForeground(event, 'CONDUCTOR_ASIGNADO');
       try {
         confirm?.call({'ok': true});
       } catch (_) {
@@ -68,7 +77,14 @@ class TripSocketService {
       _locationController.add(_map(data));
     });
     socket.on('estadoCarreraActualizado', (data) {
-      _statusController.add(_map(data));
+      logTripEvent(
+        'socket.estadoCarreraActualizado',
+        data,
+        activeTripId: _activeTripId,
+      );
+      final event = _map(data);
+      _statusController.add(event);
+      _notifyForeground(event, 'ESTADO_CARRERA');
     });
     socket.onConnect((_) => _authenticate());
     socket.onConnectError((error) {
@@ -144,10 +160,18 @@ class TripSocketService {
     final socket = _socket;
     if (socket == null || !socket.connected || !_authenticated) return;
 
+    logTripEvent('socket.consultarEstadoCarrera.solicitud', {
+      'carrera_id': carreraId,
+    }, activeTripId: _activeTripId);
     socket.emitWithAck(
       'consultarEstadoCarrera',
-      {'carrera_id': carreraId},
+      {'carrera_id': int.tryParse(carreraId) ?? carreraId},
       ack: (response) {
+        logTripEvent(
+          'socket.consultarEstadoCarrera.respuesta',
+          response,
+          activeTripId: _activeTripId,
+        );
         final result = _map(response);
         if (result['ok'] != true) {
           final error = result['error'];
@@ -161,9 +185,20 @@ class TripSocketService {
           // controlador procese asignaciones en vivo y recuperadas por igual.
           _assignmentController.add(<String, dynamic>{
             'carrera': Map<String, dynamic>.from(carrera),
+            '_recovered': true,
           });
         }
       },
+    );
+  }
+
+  void _notifyForeground(Map<String, dynamic> event, String type) {
+    if (!Get.isRegistered<PushNotificationService>()) return;
+    unawaited(
+      Get.find<PushNotificationService>().handleForegroundTripEvent({
+        'tipo': type,
+        ...event,
+      }),
     );
   }
 

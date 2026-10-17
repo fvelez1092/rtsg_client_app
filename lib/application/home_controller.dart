@@ -1,7 +1,9 @@
+import 'package:app_rtsg_client/data/services/gps_service.dart';
 import 'package:app_rtsg_client/application/home_content_controller.dart';
 import 'package:app_rtsg_client/application/trips_controller.dart';
 import 'package:app_rtsg_client/data/models/trips/trip_model.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
@@ -46,10 +48,18 @@ class HomeController extends GetxController {
   }
 
   Future<void> loadHome() async {
-    await Future.wait([
-      _contentController.loadContent(),
-      _tripsController.fetchTrips(),
-    ]);
+    final gps = Get.find<GpsService>();
+    if (kDebugMode) debugPrint('[RTSG][HOME] actualización manual iniciada');
+    await gps.getCurrentLocation();
+    if (gps.hasUsableLocation) {
+      await _contentController.loadContent();
+    } else if (kDebugMode) {
+      debugPrint(
+        '[RTSG][HOME] sin ubicación; partners y recomendaciones no se '
+        'consultarán. estado=${gps.access.value} error=${gps.error.value}',
+      );
+    }
+    await _tripsController.fetchTrips();
   }
 
   void changeAdvertisement(int index) {

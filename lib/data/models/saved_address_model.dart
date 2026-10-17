@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:latlong2/latlong.dart';
 
 class SavedAddress {
@@ -36,11 +37,26 @@ class SavedAddress {
   LatLng? get point {
     final lat = latitude;
     final lon = longitude;
-    return lat == null || lon == null ? null : LatLng(lat, lon);
+    if (lat == null ||
+        lon == null ||
+        !lat.isFinite ||
+        !lon.isFinite ||
+        lat.abs() > 90 ||
+        lon.abs() > 180) {
+      return null;
+    }
+    return LatLng(lat, lon);
   }
 
   factory SavedAddress.fromJson(Map<String, dynamic> json) {
-    final rawCoordinates = json['coordenadas'];
+    dynamic rawCoordinates = json['coordenadas'];
+    if (rawCoordinates is String) {
+      try {
+        rawCoordinates = jsonDecode(rawCoordinates);
+      } catch (_) {
+        rawCoordinates = null;
+      }
+    }
     final coordinates = rawCoordinates is Map
         ? Map<String, dynamic>.from(rawCoordinates)
         : const <String, dynamic>{};
@@ -50,14 +66,27 @@ class SavedAddress {
       personId: _asNullableInt(json['persona_id']),
       label: (json['alias'] ?? json['label'] ?? '').toString(),
       address: (json['direccion'] ?? json['address'] ?? '').toString(),
-      exactLocation:
-          (json['ubicacion_exacta'] ?? json['exact_location'] ?? '').toString(),
-      baseId: _asNullableInt(json['base_id']),
+      exactLocation: (json['ubicacion_exacta'] ?? json['exact_location'] ?? '')
+          .toString(),
+      baseId: _asNullableInt(json['base_id'] ?? json['baseid']),
       latitude: _asNullableDouble(
-        coordinates['lat'] ?? json['latitude'],
+        coordinates['lat'] ??
+            coordinates['latitud'] ??
+            coordinates['latitude'] ??
+            json['latitude'] ??
+            json['latitud'] ??
+            json['lat'],
       ),
       longitude: _asNullableDouble(
-        coordinates['long'] ?? json['longitude'],
+        coordinates['long'] ??
+            coordinates['lng'] ??
+            coordinates['lon'] ??
+            coordinates['longitud'] ??
+            coordinates['longitude'] ??
+            json['longitude'] ??
+            json['longitud'] ??
+            json['lng'] ??
+            json['long'],
       ),
       isDefault: _asBool(json['is_default']),
       active: json.containsKey('estado_direccion')
@@ -71,17 +100,14 @@ class SavedAddress {
   }
 
   Map<String, dynamic> toUpdateJson() => {
-        if (id != null) 'id_persona_direccion': id,
-        'alias': label,
-        'direccion': address,
-        'ubicacion_exacta': exactLocation,
-        'base_id': baseId,
-        'is_default': isDefault,
-        'coordenadas': {
-          'lat': latitude,
-          'long': longitude,
-        },
-      };
+    if (id != null) 'id_persona_direccion': id,
+    'alias': label,
+    'direccion': address,
+    'ubicacion_exacta': exactLocation,
+    'base_id': baseId,
+    'is_default': isDefault,
+    'coordenadas': {'lat': latitude, 'long': longitude},
+  };
 }
 
 int? _asNullableInt(dynamic value) {

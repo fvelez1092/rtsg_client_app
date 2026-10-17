@@ -1,3 +1,7 @@
+import 'package:app_rtsg_client/global_memory.dart';
+import 'package:app_rtsg_client/data/services/user_service.dart';
+import 'package:app_rtsg_client/data/services/gps_service.dart';
+import 'package:app_rtsg_client/presentation/widgets/location_access_card.dart';
 import 'package:app_rtsg_client/application/home_controller.dart';
 import 'package:app_rtsg_client/data/models/partnert_model.dart';
 import 'package:app_rtsg_client/data/models/trips/trip_model.dart';
@@ -37,11 +41,17 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Obx(() {
-          if (controller.isLoading.value && controller.advertisements.isEmpty) {
+          final gps = Get.find<GpsService>();
+          final hasLocation = gps.hasUsableLocation;
+          if (hasLocation &&
+              controller.isLoading.value &&
+              controller.advertisements.isEmpty) {
             return const _HomeSkeleton();
           }
 
-          if (controller.hasError.value && controller.advertisements.isEmpty) {
+          if (hasLocation &&
+              controller.hasError.value &&
+              controller.advertisements.isEmpty) {
             return _HomeError(onRetry: controller.loadHome);
           }
 
@@ -53,10 +63,16 @@ class _HomePageState extends State<HomePage> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverToBoxAdapter(child: _buildHeader(context)),
+                if (!hasLocation)
+                  SliverToBoxAdapter(child: LocationAccessCard(gps: gps)),
                 SliverToBoxAdapter(child: _buildDestinationCard(context)),
                 SliverToBoxAdapter(child: _buildServiceOptions(context)),
-                SliverToBoxAdapter(child: _buildAdvertisementSection(context)),
-                SliverToBoxAdapter(child: _buildPartnersSection(context)),
+                if (hasLocation) ...[
+                  SliverToBoxAdapter(
+                    child: _buildAdvertisementSection(context),
+                  ),
+                  SliverToBoxAdapter(child: _buildPartnersSection(context)),
+                ],
                 SliverToBoxAdapter(child: _buildRecentActivity(context)),
                 const SliverToBoxAdapter(child: SizedBox(height: 30)),
               ],
@@ -100,16 +116,30 @@ class _HomePageState extends State<HomePage> {
           Material(
             color: colors.primary,
             shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => Get.offNamed(AppRoutes.ACCOUNT),
               customBorder: const CircleBorder(),
               child: SizedBox(
                 width: 48,
                 height: 48,
-                child: Icon(
-                  Icons.person_outline_rounded,
-                  color: colors.onPrimary,
-                ),
+                child: Obx(() {
+                  final url = UserService.profilePhotoUrl(
+                    GlobalMemory.to.userRx.value?.photo,
+                  );
+                  final placeholder = Icon(
+                    Icons.person_outline_rounded,
+                    color: colors.onPrimary,
+                  );
+                  if (url == null) return placeholder;
+                  return Image.network(
+                    url,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, error, stack) => placeholder,
+                  );
+                }),
               ),
             ),
           ),
@@ -188,7 +218,7 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GridView.count(
-        crossAxisCount: 4,
+        crossAxisCount: Get.find<GpsService>().hasUsableLocation ? 4 : 3,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
         shrinkWrap: true,
@@ -210,11 +240,12 @@ class _HomePageState extends State<HomePage> {
             icon: Icons.inventory_2_outlined,
             onTap: () => Get.toNamed(AppRoutes.DELIVERY),
           ),
-          ServiceOptionCard(
-            title: 'Partners',
-            icon: Icons.storefront_outlined,
-            onTap: () => Get.toNamed(AppRoutes.PARTNERS),
-          ),
+          if (Get.find<GpsService>().hasUsableLocation)
+            ServiceOptionCard(
+              title: 'Partners',
+              icon: Icons.storefront_outlined,
+              onTap: () => Get.toNamed(AppRoutes.PARTNERS),
+            ),
         ],
       ),
     );
@@ -225,7 +256,25 @@ class _HomePageState extends State<HomePage> {
     final colors = theme.colorScheme;
 
     if (controller.advertisements.isEmpty) {
-      return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle(
+              context,
+              title: 'Recomendaciones para ti',
+              icon: Icons.local_offer_outlined,
+            ),
+            const SizedBox(height: 10),
+            _buildEmptyContentCard(
+              context,
+              message: 'Todavía no hay recomendaciones disponibles.',
+              icon: Icons.lightbulb_outline_rounded,
+            ),
+          ],
+        ),
+      );
     }
 
     return Padding(
@@ -327,7 +376,25 @@ class _HomePageState extends State<HomePage> {
     final colors = theme.colorScheme;
 
     if (controller.partners.isEmpty) {
-      return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle(
+              context,
+              title: 'Partners RTSG',
+              icon: Icons.storefront_outlined,
+            ),
+            const SizedBox(height: 10),
+            _buildEmptyContentCard(
+              context,
+              message: 'Aún no hay partners disponibles cerca de ti.',
+              icon: Icons.store_mall_directory_outlined,
+            ),
+          ],
+        ),
+      );
     }
 
     return Padding(
@@ -371,6 +438,69 @@ class _HomePageState extends State<HomePage> {
                       Get.toNamed(AppRoutes.PARTNER_DETAIL, arguments: partner),
                 );
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+  }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 37,
+          height: 37,
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: .12),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Icon(icon, color: colors.primary, size: 21),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyContentCard(
+    BuildContext context, {
+    required String message,
+    required IconData icon,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.onSurface.withValues(alpha: .08)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: colors.primary.withValues(alpha: .8), size: 21),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
             ),
           ),
         ],

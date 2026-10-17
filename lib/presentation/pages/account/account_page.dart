@@ -1,3 +1,8 @@
+import 'package:app_rtsg_client/application/profile_controller.dart';
+import 'package:app_rtsg_client/data/services/saved_address_service.dart';
+import 'package:app_rtsg_client/presentation/pages/profile/components/profile_photo_editor.dart';
+import 'package:flutter/foundation.dart';
+import 'package:app_rtsg_client/data/services/push_notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -7,14 +12,35 @@ import 'package:app_rtsg_client/presentation/pages/account/saved_addresses_page.
 import 'package:app_rtsg_client/presentation/widgets/main_bottom_navigation.dart';
 import 'package:app_rtsg_client/routes/rtsg_routes.dart';
 
-class AccountPage extends StatelessWidget {
+class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
+
+  @override
+  State<AccountPage> createState() => _AccountPageState();
+}
+
+class _AccountPageState extends State<AccountPage> {
+  late final ProfileController photoController;
+
+  @override
+  void initState() {
+    super.initState();
+    photoController = ProfileController(SavedAddressService());
+    photoController.onStart();
+  }
+
+  @override
+  void dispose() {
+    photoController.onDelete();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = GlobalMemory.to.user;
-    final name = (user?.razonSocial ?? user?.username ?? user?.user ?? 'Usuario RTSG')
-        .trim();
+    final name =
+        (user?.razonSocial ?? user?.username ?? user?.user ?? 'Usuario RTSG')
+            .trim();
     final email = (user?.email ?? 'usuario@rtsg.ec').trim();
     final phone = (user?.cellphone ?? '+593 99 000 0000').trim();
 
@@ -40,25 +66,14 @@ class AccountPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: AppColors.borderSoft),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Container(
-                    width: 68,
-                    height: 68,
-                    decoration: BoxDecoration(
-                      color: AppColors.brandGreen.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person_rounded,
-                      size: 36,
-                      color: AppColors.brandGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
+                  ProfilePhotoEditor(controller: photoController, size: 76),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           name.isEmpty ? 'Usuario RTSG' : name,
@@ -121,6 +136,29 @@ class AccountPage extends StatelessWidget {
               subtitle: 'Viajes, promociones y recordatorios',
               onTap: () => _mockMessage('Preferencias de notificaciones'),
             ),
+            if (kDebugMode && Get.isRegistered<PushNotificationService>())
+              _AccountOption(
+                icon: Icons.notification_add_outlined,
+                title: 'Probar notificación',
+                subtitle: 'Verificar los avisos de este teléfono',
+                onTap: () async {
+                  try {
+                    final sent = await Get.find<PushNotificationService>()
+                        .showTestNotification();
+                    Get.snackbar(
+                      'Notificaciones',
+                      sent
+                          ? 'Aviso de prueba solicitado. Comprueba el banner del teléfono.'
+                          : 'Activa los permisos de notificaciones en los ajustes del teléfono.',
+                    );
+                  } catch (error) {
+                    Get.snackbar(
+                      'No se pudo enviar la prueba',
+                      error.toString(),
+                    );
+                  }
+                },
+              ),
             _AccountOption(
               icon: Icons.help_outline_rounded,
               title: 'Ayuda y soporte',
@@ -215,32 +253,32 @@ class _AccountOption extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(17),
           ),
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: AppColors.brandGreen.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(12),
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.brandGreen.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppColors.brandGreen),
           ),
-          child: Icon(icon, color: AppColors.brandGreen),
-        ),
           title: Text(
-          title,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
             color: AppColors.textSecondary,
-            fontSize: 12,
-          ),
-        ),
-        trailing: const Icon(
-          Icons.chevron_right_rounded,
-          color: AppColors.textSecondary,
           ),
         ),
       ),

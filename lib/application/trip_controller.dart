@@ -1,3 +1,6 @@
+import 'package:app_rtsg_client/data/models/tariff_configuration.dart';
+import 'package:app_rtsg_client/data/services/tariff_configuration_service.dart';
+import 'package:app_rtsg_client/data/services/trip_diagnostics.dart';
 import 'package:app_rtsg_client/data/models/trip_number.dart';
 import 'package:app_rtsg_client/application/trips_controller.dart';
 import 'package:app_rtsg_client/data/models/trip_state_contract.dart';
@@ -33,9 +36,22 @@ class TripController extends GetxController {
   StreamSubscription<Map<String, dynamic>>? _stateSubscription;
   Worker? _statusWorker;
   bool _searchDialogVisible = false;
+  final RxBool isRecoveringTrip = false.obs;
+  final RxString recoveryError = ''.obs;
+  Timer? _recoveryTimeout;
 
-  TripController({MapboxGeocoder? geocoder})
-    : _geocoder = geocoder ?? MapboxGeocoder();
+  TripController({
+    MapboxGeocoder? geocoder,
+    TariffConfigurationService? tariffService,
+    DateTime Function()? now,
+  }) : _geocoder = geocoder ?? MapboxGeocoder(),
+       _tariffService = tariffService ?? TariffConfigurationService(),
+       _now = now ?? DateTime.now;
+
+  final TariffConfigurationService _tariffService;
+  final DateTime Function() _now;
+  final Rxn<TariffConfiguration> tariffConfiguration =
+      Rxn<TariffConfiguration>();
 
   final RxString centerLabel = 'Buscando ubicación…'.obs;
   final RxBool isResolvingOrigin = false.obs;
@@ -57,6 +73,11 @@ class TripController extends GetxController {
     _assignmentSubscription = _tripSocket.assignments.listen(_onAssignment);
     _locationSubscription = _tripSocket.locations.listen(_onLocation);
     _socketErrorSubscription = _tripSocket.errors.listen((message) {
+      if (isRecoveringTrip.value) {
+        recoveryError.value = message;
+        isRecoveringTrip.value = false;
+        _recoveryTimeout?.cancel();
+      }
       Get.snackbar(
         'Conexión de carrera',
         message,
@@ -127,9 +148,12 @@ class TripController extends GetxController {
     _originReqId++;
     _originWasSelectedManually = true;
     lastCenter = point;
-    centerLabel.value = address.address;
+    final originName = address.address.trim().isNotEmpty
+        ? address.address
+        : address.label;
+    centerLabel.value = originName;
     isResolvingOrigin.value = false;
-    originAddress.value = address.address;
+    originAddress.value = originName;
     originLatLng.value = point;
     selectedOriginAddressId = address.id;
     selectedOriginBaseId = address.baseId;
@@ -189,6 +213,7 @@ class TripController extends GetxController {
 
   Future<void> _resolveOriginAddress(LatLng center) async {
     final currentReq = ++_originReqId;
+    originLatLng.value = center;
     isResolvingOrigin.value = true;
 
     try {
@@ -205,6 +230,7 @@ class TripController extends GetxController {
     } catch (_) {
       if (currentReq != _originReqId) return;
       centerLabel.value = 'Dirección no disponible';
+      originAddress.value = 'Ubicación seleccionada en el mapa';
     } finally {
       if (currentReq == _originReqId) isResolvingOrigin.value = false;
     }
@@ -283,14 +309,12 @@ class TripController extends GetxController {
   }
 
   final RxBool isCalculating = false.obs;
+  final RxString routeError = ''.obs;
+  int _routeReqId = 0;
   final RxDouble distanceKm = 0.0.obs;
   final RxInt durationMin = 0.obs;
   final RxList<LatLng> routePoints = <LatLng>[].obs;
   final RxDouble estimatedFare = 0.0.obs;
-
-  double baseFare = 1.00;
-  double perKm = 0.60;
-  double perMin = 0.05;
 
   final Rx<TripCategory> selectedCategory = TripCategory.normal.obs;
   final RxDouble priceBoost = 0.0.obs;
@@ -323,7 +347,14 @@ class TripController extends GetxController {
     final dest = destinationLatLng.value;
     if (origin == null || dest == null) return;
 
+    final request = ++_routeReqId;
     isCalculating.value = true;
+    routeError.value = '';
+    tariffConfiguration.value = null;
+    distanceKm.value = 0;
+    durationMin.value = 0;
+    routePoints.clear();
+    estimatedFare.value = 0;
     try {
       final res = await _geocoder.route(
         origin: origin,
@@ -331,7 +362,10 @@ class TripController extends GetxController {
         profile: 'driving',
       );
 
+      if (request != _routeReqId || isClosed) return;
       if (res == null) {
+        routeError.value =
+            'No pudimos calcular la ruta. Revisa tu conexión y vuelve a intentarlo.';
         distanceKm.value = 0;
         durationMin.value = 0;
         routePoints.clear();
@@ -343,17 +377,42 @@ class TripController extends GetxController {
       final dSeconds = (res['duration_s'] as num?)?.toDouble() ?? 0.0;
       final pts = (res['points'] as List?)?.cast<LatLng>() ?? <LatLng>[];
 
+      if (!dMeters.isFinite ||
+          !dSeconds.isFinite ||
+          dMeters <= 0 ||
+          dSeconds <= 0) {
+        routeError.value =
+            'No encontramos una ruta válida entre el origen y el destino.';
+        return;
+      }
       distanceKm.value = dMeters / 1000.0;
-      durationMin.value = (dSeconds / 60.0).round();
+      durationMin.value = (dSeconds / 60.0).ceil();
       routePoints.assignAll(pts);
-      estimatedFare.value = _calcFare(distanceKm.value, durationMin.value);
+      TariffConfiguration configuration;
+      try {
+        configuration = await _tariffService.getConfiguration();
+      } catch (_) {
+        if (request == _routeReqId && !isClosed) {
+          routeError.value =
+              'No pudimos obtener la tarifa del viaje. Revisa tu conexión y reintenta.';
+        }
+        return;
+      }
+      if (request != _routeReqId || isClosed) return;
+      tariffConfiguration.value = configuration;
+      estimatedFare.value = configuration.estimate(
+        distanceKm: distanceKm.value,
+        at: _now(),
+      );
+    } catch (_) {
+      if (request == _routeReqId) {
+        routeError.value =
+            'No pudimos calcular la ruta. Revisa tu conexión y vuelve a intentarlo.';
+      }
     } finally {
-      isCalculating.value = false;
+      if (request == _routeReqId) isCalculating.value = false;
     }
   }
-
-  double _calcFare(double km, int min) =>
-      _roundMoney(baseFare + (km * perKm) + (min * perMin));
 
   double _roundMoney(double value) => (value * 100).roundToDouble() / 100.0;
 
@@ -367,6 +426,8 @@ class TripController extends GetxController {
     return originOk &&
         destOk &&
         routeOk &&
+        tariffConfiguration.value != null &&
+        routeError.value.isEmpty &&
         !isCalculating.value &&
         !isResolvingOrigin.value &&
         status.value == TripStatus.idle;
@@ -459,6 +520,15 @@ class TripController extends GetxController {
   void recoverAssignedTrip(int tripId) {
     if (tripId <= 0) return;
     final id = tripId.toString();
+    recoveryError.value = '';
+    isRecoveringTrip.value = true;
+    _recoveryTimeout?.cancel();
+    _recoveryTimeout = Timer(const Duration(seconds: 15), () {
+      if (isClosed || !isRecoveringTrip.value) return;
+      recoveryError.value =
+          'No pudimos consultar el viaje. Vuelve a intentarlo.';
+      isRecoveringTrip.value = false;
+    });
     if (activeTrip.value?.id == id) {
       _tripSocket.listenForTrip(id);
       return;
@@ -480,7 +550,6 @@ class TripController extends GetxController {
       status: TripStatus.accepted,
     );
     status.value = TripStatus.accepted;
-    _rememberActiveTrip();
     _tripSocket.listenForTrip(id);
   }
 
@@ -489,7 +558,13 @@ class TripController extends GetxController {
     final trip = rawTrip is Map ? Map<String, dynamic>.from(rawTrip) : event;
     final id = _eventTripId(trip) ?? _eventTripId(event);
     final activeId = activeTrip.value?.id;
-    if (id == null || activeId == null || id != activeId) return;
+    if (id == null || activeId == null || id != activeId) {
+      logTripEvent('controlador.ignorado', {
+        'motivo': 'Carrera distinta o sin ID activo',
+        'id_recibido': id,
+      }, activeTripId: activeId);
+      return;
+    }
 
     final decodedStatus = tripStatusFromBackend(trip);
     final hasState = [
@@ -505,16 +580,37 @@ class TripController extends GetxController {
         trip['conductorId'] != null;
     final nextStatus =
         decodedStatus ?? (!hasState && hasDriver ? TripStatus.accepted : null);
-    if (nextStatus == null) return;
+    if (nextStatus == null) {
+      logTripEvent('controlador.ignorado', {
+        'motivo': 'Estado no reconocido o sin asignación',
+        'payload': trip,
+      }, activeTripId: activeId);
+      return;
+    }
     // Una retransmisión de la asignación no debe reabrir un viaje finalizado.
-    if (status.value == TripStatus.completed) return;
+    final recovered = event['_recovered'] == true;
+    if (status.value == TripStatus.completed && !recovered) {
+      logTripEvent('controlador.ignorado', {
+        'motivo': 'La carrera ya está finalizada',
+      }, activeTripId: activeId);
+      return;
+    }
     const progress = {
       TripStatus.accepted: 1,
       TripStatus.arrived: 2,
       TripStatus.started: 3,
       TripStatus.completed: 4,
+      TripStatus.cancelled: 4,
     };
-    if ((progress[nextStatus] ?? 0) < (progress[status.value] ?? 0)) return;
+    if (!recovered &&
+        (progress[nextStatus] ?? 0) < (progress[status.value] ?? 0)) {
+      logTripEvent('controlador.ignorado', {
+        'motivo': 'Estado anterior al actual',
+        'actual': status.value.name,
+        'recibido': nextStatus.name,
+      }, activeTripId: activeId);
+      return;
+    }
 
     _applyRecoveredTripData(trip);
     final driver = trip['conductor'];
@@ -547,10 +643,66 @@ class TripController extends GetxController {
       hasFare: tripNumber(trip['costo'] ?? trip['cost']) != null ? true : null,
       assignment: {...?activeTrip.value!.assignment, ...trip},
     );
+    logTripEvent('controlador.estadoAplicado', {
+      'anterior': status.value.name,
+      'nuevo': nextStatus.name,
+      'estado_codigo': trip['estado_codigo'],
+      'estado': trip['estado'],
+      'distancia_km': activeTrip.value!.hasDistance
+          ? activeTrip.value!.distanceKm
+          : null,
+      'costo': activeTrip.value!.hasFare ? activeTrip.value!.fare : null,
+      'conductor': activeTrip.value!.assignment?['conductor'],
+      'unidad': activeTrip.value!.assignment?['unidad'],
+    }, activeTripId: activeId);
+    _recoveryTimeout?.cancel();
+    recoveryError.value = '';
+    isRecoveringTrip.value = false;
     status.value = nextStatus;
     _rememberActiveTrip();
+    if (recovered ||
+        nextStatus == TripStatus.completed ||
+        nextStatus == TripStatus.cancelled) {
+      unawaited(_loadTripDetails(activeId));
+    }
     if (Get.isRegistered<TripsController>()) {
       unawaited(Get.find<TripsController>().fetchTrips());
+    }
+  }
+
+  Future<void> _loadTripDetails(String id) async {
+    try {
+      final details = await _tripService.getTripDetails(id);
+      if (isClosed || activeTrip.value?.id != id || details == null) return;
+      activeTrip.value = activeTrip.value!.copyWith(
+        distanceKm: details.hasDistance ? details.distanceKm.toDouble() : null,
+        fare: details.hasFare ? details.cost.toDouble() : null,
+        hasDistance: details.hasDistance ? true : null,
+        hasFare: details.hasFare ? true : null,
+        durationMin: details.estimatedTime.inMinutes > 0
+            ? details.estimatedTime.inMinutes
+            : null,
+        originName: details.departureAddress.isNotEmpty
+            ? details.departureAddress
+            : null,
+        destinationName: details.destinationAddress.isNotEmpty
+            ? details.destinationAddress
+            : null,
+      );
+      if (details.departureAddress.isNotEmpty) {
+        originAddress.value = details.departureAddress;
+      }
+      if (details.destinationAddress.isNotEmpty) {
+        destinationAddress.value = details.destinationAddress;
+      }
+      if (details.hasDistance) distanceKm.value = details.distanceKm.toDouble();
+      if (details.hasFare) estimatedFare.value = details.cost.toDouble();
+      _rememberActiveTrip();
+    } catch (error) {
+      logTripEvent('historial.detallesNoDisponibles', {
+        'carrera_id': id,
+        'error': error.toString(),
+      });
     }
   }
 
@@ -728,6 +880,12 @@ class TripController extends GetxController {
   }
 
   void resetTrip() {
+    _routeReqId++;
+    routeError.value = '';
+    isCalculating.value = false;
+    _recoveryTimeout?.cancel();
+    isRecoveringTrip.value = false;
+    recoveryError.value = '';
     ActiveTripSession.instance.clear();
     driverPosition.value = null;
     destinationAddress.value = '';
@@ -780,6 +938,7 @@ class TripController extends GetxController {
     _locationSubscription?.cancel();
     _socketErrorSubscription?.cancel();
     _stateSubscription?.cancel();
+    _recoveryTimeout?.cancel();
     _statusWorker?.dispose();
     _tripSocket.dispose();
     _gpsWorker?.dispose();
