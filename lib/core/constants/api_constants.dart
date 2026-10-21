@@ -17,4 +17,10 @@ abstract class ApiConstants {
   static const String versionAPI = "v3";
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;
+
+  //geoapify configuration
+  static const String geoapifyBaseUrl = 'https://api.geoapify.com/v1/geocode';
+  static const String geoapifyApiKey = String.fromEnvironment(
+    'GEOAPIFY_API_KEY',
+  );
 }

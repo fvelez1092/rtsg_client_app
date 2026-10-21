@@ -51,8 +51,8 @@ class MapboxGeocoder {
     try {
       final encodedQuery = Uri.encodeComponent(q);
 
-      // ✅ Asegura que types incluya POI (para "rotonda", lugares, etc.)
-      // Si ApiConstants.mapboxTypes no tiene 'poi', lo añadimos sin romper tu constante.
+      // Geocoding v5 no longer supplies POI data. Adding a type cannot
+      // restore missing provider coverage for terminals or businesses.
       final rawTypes = ApiConstants.mapboxTypes.trim();
       final normalizedTypes = rawTypes.isEmpty ? 'poi,address,place' : rawTypes;
       final types = normalizedTypes.contains('poi')

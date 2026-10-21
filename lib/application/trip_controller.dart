@@ -1,3 +1,4 @@
+import 'package:app_rtsg_client/data/services/location_service_factory.dart';
 import 'package:app_rtsg_client/data/models/tariff_configuration.dart';
 import 'package:app_rtsg_client/data/services/tariff_configuration_service.dart';
 import 'package:app_rtsg_client/data/services/trip_diagnostics.dart';
@@ -44,7 +45,7 @@ class TripController extends GetxController {
     MapboxGeocoder? geocoder,
     TariffConfigurationService? tariffService,
     DateTime Function()? now,
-  }) : _geocoder = geocoder ?? MapboxGeocoder(),
+  }) : _geocoder = geocoder ?? createLocationService(),
        _tariffService = tariffService ?? TariffConfigurationService(),
        _now = now ?? DateTime.now;
 

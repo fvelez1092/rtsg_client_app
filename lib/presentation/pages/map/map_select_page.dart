@@ -1,10 +1,10 @@
+import 'package:app_rtsg_client/data/services/location_service_factory.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
 import 'package:app_rtsg_client/presentation/widgets/map_widget.dart';
-import 'package:app_rtsg_client/data/services/mapbox_service.dart';
 import 'package:app_rtsg_client/data/models/map_point_result_model.dart';
 
 class MapSelectPage extends StatefulWidget {
@@ -22,7 +22,7 @@ class MapSelectPage extends StatefulWidget {
 }
 
 class _MapSelectPageState extends State<MapSelectPage> {
-  final _geocoder = MapboxGeocoder();
+  final _geocoder = createLocationService();
 
   LatLng _center = const LatLng(0, 0);
   String _label = 'Buscando dirección…';

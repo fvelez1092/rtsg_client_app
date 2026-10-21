@@ -1,3 +1,4 @@
+import 'package:app_rtsg_client/data/services/location_service_factory.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
@@ -28,12 +29,11 @@ class TripLocationPickerPage extends StatefulWidget {
   });
 
   @override
-  State<TripLocationPickerPage> createState() =>
-      _TripLocationPickerPageState();
+  State<TripLocationPickerPage> createState() => _TripLocationPickerPageState();
 }
 
 class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
-  final MapboxGeocoder _geocoder = MapboxGeocoder();
+  final MapboxGeocoder _geocoder = createLocationService();
   final SavedAddressService _savedAddressService = SavedAddressService();
   final TextEditingController _labelController = TextEditingController();
   final TextEditingController _exactLocationController =
@@ -50,8 +50,7 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
     super.initState();
     _center = widget.initialCenter;
     _labelController.text = widget.addressToEdit?.label ?? '';
-    _exactLocationController.text =
-        widget.addressToEdit?.exactLocation ?? '';
+    _exactLocationController.text = widget.addressToEdit?.exactLocation ?? '';
     _address = widget.addressToEdit?.address ?? _address;
     _resolve(_center);
   }
@@ -133,7 +132,9 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
     }
 
     if (!mounted) return;
-    Get.back(result: MapPointResult(point: _center, name: _address));
+    Get.back(
+      result: MapPointResult(point: _center, name: _address),
+    );
   }
 
   @override
@@ -150,8 +151,8 @@ class _TripLocationPickerPageState extends State<TripLocationPickerPage> {
     final bottomInset = keyboardInset > 0
         ? keyboardInset + 12
         : safeBottom + 12;
-    final maxCardHeight = mediaQuery.size.height *
-        (widget.saveAsUserAddress ? 0.50 : 0.40);
+    final maxCardHeight =
+        mediaQuery.size.height * (widget.saveAsUserAddress ? 0.50 : 0.40);
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
