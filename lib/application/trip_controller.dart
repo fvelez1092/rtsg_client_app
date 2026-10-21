@@ -310,6 +310,7 @@ class TripController extends GetxController {
 
   final RxBool isCalculating = false.obs;
   final RxString routeError = ''.obs;
+  final RxBool tariffUnavailable = false.obs;
   int _routeReqId = 0;
   final RxDouble distanceKm = 0.0.obs;
   final RxInt durationMin = 0.obs;
@@ -350,6 +351,7 @@ class TripController extends GetxController {
     final request = ++_routeReqId;
     isCalculating.value = true;
     routeError.value = '';
+    tariffUnavailable.value = false;
     tariffConfiguration.value = null;
     distanceKm.value = 0;
     durationMin.value = 0;
@@ -393,8 +395,9 @@ class TripController extends GetxController {
         configuration = await _tariffService.getConfiguration();
       } catch (_) {
         if (request == _routeReqId && !isClosed) {
+          tariffUnavailable.value = true;
           routeError.value =
-              'No pudimos obtener la tarifa del viaje. Revisa tu conexión y reintenta.';
+              'No pudimos calcular la tarifa estimada. Puedes reintentar o solicitar el viaje sin estimación.';
         }
         return;
       }
@@ -426,8 +429,8 @@ class TripController extends GetxController {
     return originOk &&
         destOk &&
         routeOk &&
-        tariffConfiguration.value != null &&
-        routeError.value.isEmpty &&
+        (tariffConfiguration.value != null || tariffUnavailable.value) &&
+        (routeError.value.isEmpty || tariffUnavailable.value) &&
         !isCalculating.value &&
         !isResolvingOrigin.value &&
         status.value == TripStatus.idle;
@@ -446,6 +449,33 @@ class TripController extends GetxController {
     isCreatingTrip.value = true;
 
     try {
+      if (tariffUnavailable.value) {
+        final routeRequest = _routeReqId;
+        final confirmed = await Get.dialog<bool>(
+          AlertDialog(
+            title: const Text('¿Solicitar sin tarifa estimada?'),
+            content: const Text(
+              'No pudimos calcular el costo aproximado. Puedes solicitar el viaje, pero su valor está por confirmar. ¿Deseas continuar?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Volver'),
+              ),
+              FilledButton(
+                onPressed: () => Get.back(result: true),
+                child: const Text('Solicitar viaje'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true ||
+            isClosed ||
+            routeRequest != _routeReqId ||
+            !canCreateTrip) {
+          return;
+        }
+      }
       final user = GlobalMemory.to.user;
       final clienteId = user?.idPerson;
       final usuarioId = user?.idUser;
@@ -476,7 +506,7 @@ class TripController extends GetxController {
         latitudDestino: destinationLatLng.value!.latitude,
         longitudDestino: destinationLatLng.value!.longitude,
         distancia: distanceKm.value,
-        costo: finalFare,
+        costo: tariffUnavailable.value ? null : finalFare,
       );
 
       final created = await _tripService.createTrip(request);
@@ -500,7 +530,12 @@ class TripController extends GetxController {
         durationMin: created.estimatedTime.inMinutes > 0
             ? created.estimatedTime.inMinutes
             : durationMin.value,
-        fare: created.cost.toDouble() > 0 ? created.cost.toDouble() : finalFare,
+        fare: created.hasFare
+            ? created.cost.toDouble()
+            : tariffUnavailable.value
+            ? 0
+            : finalFare,
+        hasFare: created.hasFare || !tariffUnavailable.value,
         status: TripStatus.searching,
       );
 

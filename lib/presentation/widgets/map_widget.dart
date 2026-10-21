@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'package:app_rtsg_client/presentation/widgets/vehicle_map_marker.dart';
 import 'dart:async';
 
 import 'package:app_rtsg_client/core/theme/app_colors.dart';
@@ -81,6 +83,9 @@ class _MapPickerState extends State<MapPicker> {
   StreamSubscription<MapEvent>? _sub;
   Timer? _fitTrailingTimer;
 
+  double _driverTurns = 0;
+  LatLng? _bearingAnchor;
+
   bool _isMoving = false;
   bool _userInteracting = false;
   DateTime _lastTick = DateTime.fromMillisecondsSinceEpoch(0);
@@ -89,6 +94,7 @@ class _MapPickerState extends State<MapPicker> {
   @override
   void initState() {
     super.initState();
+    _bearingAnchor = widget.driverPosition;
 
     _sub = _mapController.mapEventStream.listen((event) {
       // Centrar en Casa, ajustar la ruta o cambiar el tamaño no es una
@@ -132,6 +138,27 @@ class _MapPickerState extends State<MapPicker> {
   @override
   void didUpdateWidget(covariant MapPicker oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final next = widget.driverPosition;
+    final previous = _bearingAnchor ?? oldWidget.driverPosition;
+    if (next == null) {
+      _bearingAnchor = null;
+      _driverTurns = 0;
+    } else if (previous == null) {
+      _bearingAnchor = next;
+    } else if (const Distance()(previous, next) >= 4) {
+      final lat1 = previous.latitude * math.pi / 180;
+      final lat2 = next.latitude * math.pi / 180;
+      final deltaLon = (next.longitude - previous.longitude) * math.pi / 180;
+      final bearing = math.atan2(
+        math.sin(deltaLon) * math.cos(lat2),
+        math.cos(lat1) * math.sin(lat2) -
+            math.sin(lat1) * math.cos(lat2) * math.cos(deltaLon),
+      );
+      final target = bearing / (2 * math.pi);
+      final delta = (target - _driverTurns + .5) % 1 - .5;
+      _driverTurns += delta;
+      _bearingAnchor = next;
+    }
 
     if (widget.followDriver &&
         !_userInteracting &&
@@ -376,11 +403,7 @@ class _MapPickerState extends State<MapPicker> {
                       point: driver,
                       width: 48,
                       height: 48,
-                      child: const Icon(
-                        Icons.directions_car_rounded,
-                        size: 36,
-                        color: AppColors.brandRed,
-                      ),
+                      child: VehicleMapMarker(turns: _driverTurns),
                     ),
                   ],
                 ),

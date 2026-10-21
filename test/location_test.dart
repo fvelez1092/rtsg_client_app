@@ -1,3 +1,6 @@
+import 'package:app_rtsg_client/global_memory.dart';
+import 'package:app_rtsg_client/data/services/local_storage_service.dart';
+import 'dashboard_navigation_test.dart' show FakeStorage;
 import 'tariff_configuration_test.dart' show configuration;
 import 'package:app_rtsg_client/data/models/tariff_configuration.dart';
 import 'package:app_rtsg_client/data/services/tariff_configuration_service.dart';
@@ -130,6 +133,10 @@ class RacingRouteGeocoder extends MapboxGeocoder {
 }
 
 void main() {
+  setUp(() {
+    Get.put<LocalStorage>(FakeStorage());
+    Get.put(GlobalMemory());
+  });
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(() {
     Get.reset();
@@ -185,41 +192,56 @@ void main() {
       expect(gps.hasUsableLocation, isTrue);
     },
   );
-  test('Missing tariffs block a quote and retry uses backend values', () async {
-    Get.testMode = true;
-    Get.put(GpsService(platform: FakeGeo()));
-    Get.put<TripService>(FakeTrips());
-    Get.put<TripSocketService>(FakeSocket());
-    final tariffs = LocationTariffs()..fail = true;
-    final controller = Get.put(
-      TripController(
-        geocoder: RouteGeocoder(),
-        tariffService: tariffs,
-        now: () => DateTime.parse('2026-10-17T17:00:00Z'),
-      ),
-    );
-    controller.setOriginFromSavedAddress(
-      const SavedAddress(
-        id: 7,
-        label: 'Casa',
-        address: 'Mi casa',
-        latitude: -0.2,
-        longitude: -78.5,
-      ),
-    );
-    await controller.setDestination(
-      address: 'Destino',
-      point: const LatLng(-0.21, -78.51),
-    );
-    expect(controller.canCreateTrip, isFalse);
-    expect(controller.routeError.value, contains('tarifa'));
-    expect(controller.estimatedFare.value, 0);
-    tariffs.fail = false;
-    await controller.recalculateIfPossible();
-    expect(controller.canCreateTrip, isTrue);
-    expect(controller.estimatedFare.value, 1.25);
-    expect(controller.routeError.value, isEmpty);
-  });
+  testWidgets(
+    'Missing tariffs allow an unpriced request and retry uses backend values',
+    (tester) async {
+      Get.testMode = true;
+      Get.put(GpsService(platform: FakeGeo()));
+      Get.put<TripService>(FakeTrips());
+      Get.put<TripSocketService>(FakeSocket());
+      final tariffs = LocationTariffs()..fail = true;
+      final controller = Get.put(
+        TripController(
+          geocoder: RouteGeocoder(),
+          tariffService: tariffs,
+          now: () => DateTime.parse('2026-10-17T17:00:00Z'),
+        ),
+      );
+      controller.setOriginFromSavedAddress(
+        const SavedAddress(
+          id: 7,
+          label: 'Casa',
+          address: 'Mi casa',
+          latitude: -0.2,
+          longitude: -78.5,
+        ),
+      );
+      await controller.setDestination(
+        address: 'Destino',
+        point: const LatLng(-0.21, -78.51),
+      );
+      expect(controller.canCreateTrip, isTrue);
+      expect(controller.tariffUnavailable.value, isTrue);
+      expect(controller.routeError.value, contains('tarifa'));
+      expect(controller.estimatedFare.value, 0);
+      await tester.pumpWidget(
+        const GetMaterialApp(home: Scaffold(body: TripPanel())),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Solicitar sin estimación'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Solicitar sin tarifa estimada?'), findsOneWidget);
+      await tester.tap(find.text('Volver'));
+      await tester.pumpAndSettle();
+      expect(controller.isCreatingTrip.value, isFalse);
+      expect(controller.activeTrip.value, isNull);
+      tariffs.fail = false;
+      await controller.recalculateIfPossible();
+      expect(controller.canCreateTrip, isTrue);
+      expect(controller.estimatedFare.value, 1.25);
+      expect(controller.routeError.value, isEmpty);
+    },
+  );
   testWidgets(
     'Saved Casa enables the trip without GPS and ignores stale origin lookup',
     (tester) async {

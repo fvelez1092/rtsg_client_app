@@ -15,7 +15,7 @@ class TripRequest {
   final double latitudDestino;
   final double longitudDestino;
   final double distancia;
-  final double costo;
+  final double? costo;
 
   const TripRequest({
     this.boot = 'false',
@@ -49,7 +49,7 @@ class TripRequest {
       'direcciondestino': direccionDestino,
       'coordenadasdestino': {'lat': latitudDestino, 'long': longitudDestino},
       'distancia': distancia,
-      'costo': costo,
+      if (costo != null) 'costo': costo,
       if (personaDireccionId != null)
         'persona_direccion_id': personaDireccionId,
       if (baseId != null) 'baseid': baseId,

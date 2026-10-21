@@ -84,6 +84,19 @@ class TripPanel extends GetView<TripController> {
                     onPressed: controller.recalculateIfPossible,
                     child: const Text('Reintentar cálculo'),
                   ),
+                  if (controller.tariffUnavailable.value)
+                    FilledButton(
+                      onPressed:
+                          controller.canCreateTrip &&
+                              !controller.isCreatingTrip.value
+                          ? controller.createTrip
+                          : null,
+                      child: Text(
+                        controller.isCreatingTrip.value
+                            ? 'Procesando…'
+                            : 'Solicitar sin estimación',
+                      ),
+                    ),
                   TextButton(
                     onPressed: () => _openLocation(RouteSelectMode.origin),
                     child: const Text('Cambiar origen'),
