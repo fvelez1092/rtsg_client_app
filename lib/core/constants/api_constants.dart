@@ -20,7 +20,5 @@ abstract class ApiConstants {
 
   //geoapify configuration
   static const String geoapifyBaseUrl = 'https://api.geoapify.com/v1/geocode';
-  static const String geoapifyApiKey = String.fromEnvironment(
-    'GEOAPIFY_API_KEY',
-  );
+  static const String geoapifyApiKey = '3f337e3394114460bb83443d5906ece8';
 }
